@@ -18,13 +18,18 @@ typedef struct
 {
 	char* text_buffer;
 	int buffer_len;
-	SDL_Texture** texture_cache;
 
+	// Cursor
+	int cur_x, cur_y, cur_w, cur_h;
+	SDL_Color cur_fg;
+
+	SDL_Texture** texture_cache;
 	SDL_Texture* editor_texture;
 } Editor;
 
 Editor* 		editor_new			(Window* window);
 void			editor_destroy		(Editor* editor);
+void 			editor_resize		(Editor* editor, Window* window);
 void			editor_insert		(Editor* editor, char chr);
 void			editor_render_text	(Editor* editor, Window* window, SDL_Color fg, SDL_Color bg);
 void			editor_gen_tex_cache(Editor* editor, SDL_Renderer* renderer, TTF_Font* font);

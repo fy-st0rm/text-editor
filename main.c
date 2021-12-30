@@ -36,6 +36,26 @@ int main()
 				char* text = event.text.text;
 				editor_insert(editor, text[0]);
 			}
+			else if (event.type == SDL_KEYDOWN)
+			{
+				switch (event.key.keysym.sym)
+				{
+					case SDLK_RETURN:
+						editor_insert(editor, '\n');
+						break;
+				}
+			}
+			else if (event.type == SDL_WINDOWEVENT)
+			{
+				switch (event.window.event)
+				{
+					case SDL_WINDOWEVENT_RESIZED:
+						window->width  = event.window.data1;
+						window->height = event.window.data2;
+						editor_resize(editor, window);
+						break;
+				}
+			}
 
 			window_clear(window, bg); 
 			editor_render_text(editor, window, fg, bg);
