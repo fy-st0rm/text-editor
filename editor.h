@@ -30,9 +30,20 @@ typedef struct
 Editor* 		editor_new			(Window* window);
 void			editor_destroy		(Editor* editor);
 void 			editor_resize		(Editor* editor, Window* window);
+
+// Editor buffer management
+int				editor_get_cur_pos	(Editor* editor);
 void			editor_insert		(Editor* editor, char chr);
+
+// Editor cursor
+void			editor_cur_left		(Editor* editor);
+void			editor_cur_right	(Editor* editor);
+
+// Editor rendering
 void			editor_render_text	(Editor* editor, Window* window, SDL_Color fg, SDL_Color bg);
 void			editor_gen_tex_cache(Editor* editor, SDL_Renderer* renderer, TTF_Font* font);
+
+// Render helper function
 SDL_Texture* 	create_texture		(SDL_Renderer* renderer, TTF_Font* font, char* text);
 void			draw_text			(SDL_Renderer* renderer, int x, int y, SDL_Texture* texture, SDL_Color color);
 

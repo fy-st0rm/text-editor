@@ -34,17 +34,71 @@ void editor_resize(Editor* editor, Window* window)
 	editor->editor_texture = sdl_check_ptr(SDL_CreateTexture(window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, window->width, window->height));
 }
 
+// Editor buffer management
+int	editor_get_cur_pos(Editor* editor)
+{
+	// Calculates the position of the cursor in the 1D text buffer
+	int pos = 0;
+	int index = 0;
+	int line = 0;
+	for (int i = 0; i < editor->buffer_len; i++)
+	{
+		if (editor->text_buffer[i] == '\n') 
+		{
+			pos += index + 1;
+			index = 0;
+			line++;
+		}
+		else
+			index++;
+		if (line == editor->cur_y) break;
+	}
+	pos += editor->cur_x;
+	return pos;
+}
+
 void editor_insert(Editor* editor, char chr)
 {
 	char* new_buffer = calloc(editor->buffer_len + 1, sizeof(char));
-	strcpy(new_buffer, editor->text_buffer);
-	new_buffer[editor->buffer_len] = chr;
+
+	int pos = editor_get_cur_pos(editor);
+	printf("Pos: %d %d\n", pos, editor->buffer_len);
+
+	// Inserting character when the cursor is at last position
+	if (pos == editor->buffer_len)
+	{
+		strcpy(new_buffer, editor->text_buffer);
+		new_buffer[pos] = chr;
+	}
+	// Inserting character when cursor is in between of buffer
+	else
+	{
+		memcpy(new_buffer, editor->text_buffer, pos);
+		char c[1];
+		sprintf(c, "%c", chr);
+		strcpy(new_buffer + pos, c);
+		memcpy(new_buffer + pos + 1, editor->text_buffer + pos, editor->buffer_len - 1);
+	}
+
 	free(editor->text_buffer);
 	
 	editor->text_buffer = new_buffer;
 	editor->buffer_len++;
+	editor->cur_x++;
 }
 
+// Editor cursor
+void editor_cur_left(Editor* editor)
+{
+	if (editor->cur_x > 0) editor->cur_x--;
+}
+
+void editor_cur_right(Editor* editor)
+{
+	editor->cur_x++;
+}
+
+// Editor rendering
 void editor_render_text(Editor* editor, Window* window, SDL_Color fg, SDL_Color bg)
 {
 	// Setting up the render target
@@ -54,7 +108,6 @@ void editor_render_text(Editor* editor, Window* window, SDL_Color fg, SDL_Color 
 
 	// Flushing the buffer into the render target
 	int x = 0, y = 0;
-	editor->cur_x = 0, editor->cur_y = 0;
 	for (int i = 0; i < editor->buffer_len; i++)
 	{
 		int index = editor->text_buffer[i];
@@ -62,14 +115,11 @@ void editor_render_text(Editor* editor, Window* window, SDL_Color fg, SDL_Color 
 		{
 			x = 0;
 			y++;
-			editor->cur_x = 0;
-			editor->cur_y++;
 		}
 		else
 		{
 			draw_text(window->renderer, x, y, editor->texture_cache[index - CHAR_START], fg); 
 			x++;
-			editor->cur_x++;
 		}
 	}
 

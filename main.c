@@ -2,6 +2,13 @@
 #include "editor.h"
 #include "window.h"
 
+/*
+ * TODO: Text insert with cursor position
+ * TODO: Text deletion 
+ * TODO: Scrolling
+ * TODO: Cursor movement
+ */
+
 int main()
 {
 	sdl_check(SDL_Init(SDL_INIT_VIDEO));
@@ -42,6 +49,12 @@ int main()
 				{
 					case SDLK_RETURN:
 						editor_insert(editor, '\n');
+						break;
+					case SDLK_LEFT:
+						editor_cur_left(editor);
+						break;
+					case SDLK_RIGHT:
+						editor_cur_right(editor);
 						break;
 				}
 			}
