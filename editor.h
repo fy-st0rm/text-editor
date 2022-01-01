@@ -33,12 +33,16 @@ void 			editor_resize		(Editor* editor, Window* window);
 
 // Editor buffer management
 int				editor_get_cur_pos	(Editor* editor);
+int				editor_get_line_no	(Editor* editor);
+char*			editor_get_line		(Editor* editor, int line_no);
 void			editor_insert		(Editor* editor, char chr);
 void			editor_backspace	(Editor* editor);
 
 // Editor cursor
 void			editor_cur_left		(Editor* editor);
 void			editor_cur_right	(Editor* editor);
+void			editor_cur_up		(Editor* editor);
+void			editor_cur_down		(Editor* editor);
 
 // Editor rendering
 void			editor_render_text	(Editor* editor, Window* window, SDL_Color fg, SDL_Color bg);

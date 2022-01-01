@@ -43,6 +43,7 @@ int	editor_get_cur_pos(Editor* editor)
 	int line = 0;
 	for (int i = 0; i < editor->buffer_len; i++)
 	{
+		if (line == editor->cur_y) break;
 		if (editor->text_buffer[i] == '\n') 
 		{
 			pos += index + 1;
@@ -51,20 +52,57 @@ int	editor_get_cur_pos(Editor* editor)
 		}
 		else
 			index++;
-		if (line == editor->cur_y) break;
 	}
 	pos += editor->cur_x;
 	return pos;
 }
 
+int editor_get_line_no(Editor* editor)
+{
+	int line_no = 1;
+	for (int i = 0; i < editor->buffer_len; i++)
+	{
+		if (editor->text_buffer[i] == '\n') line_no++;
+	}
+	return line_no;
+}
+
+char* editor_get_line(Editor* editor, int line_no)
+{
+	// Gets the string of the particular line no
+	char* line;
+	int start = 0, end = 0, lines = 0;
+	for (int i = 0; i < editor->buffer_len; i++)
+	{
+		if ((editor->text_buffer[i] == '\n') || (i + 1 == editor->buffer_len))
+		{	
+			lines++;
+			if (lines == line_no)
+			{
+				if (editor->buffer_len == end + 1) end++;
+				line = calloc(end-start, sizeof(char));
+				memcpy(line, editor->text_buffer+start, end-start);
+				break;
+			}
+			else
+			{
+				end++;
+				start = end;
+			}
+		}
+		else
+		{
+			end++;
+		}
+	}
+	return line;
+}
+
 void editor_insert(Editor* editor, char chr)
 {
-	printf("Char %c\n", chr);
 	char* new_buffer = calloc(editor->buffer_len + 1, sizeof(char));
 
-	printf("Calc pos\n");
 	int pos = editor_get_cur_pos(editor);
-	printf("Pos: %d Buff_len: %d\n", pos, editor->buffer_len);
 
 	// Inserting character when the cursor is at last position
 	if (pos == editor->buffer_len)
@@ -97,13 +135,17 @@ void editor_insert(Editor* editor, char chr)
 
 void editor_backspace(Editor* editor)
 {
-	int pos = editor_get_cur_pos(editor);
-	if (pos)
+	int pos = editor_get_cur_pos(editor) - 1;
+	if (pos >= 0)
 	{
-		// overiting the memory in that position with the memory infront of that position
-		memmove(&editor->text_buffer[pos], &editor->text_buffer[pos+1], editor->buffer_len - pos);
-		editor->buffer_len--;
 		editor_cur_left(editor);
+		if (editor->text_buffer[pos] == '\n') 
+		{
+			editor_cur_up(editor);
+		}
+		// overiting the memory in that position with the memory infront of that position
+		memmove(&editor->text_buffer[pos], &editor->text_buffer[pos+1], strlen(editor->text_buffer) - pos);
+		editor->buffer_len = strlen(editor->text_buffer);
 	}
 }
 
@@ -115,17 +157,41 @@ void editor_cur_left(Editor* editor)
 
 void editor_cur_right(Editor* editor)
 {
-	char* temp_buffer = calloc(editor->buffer_len, sizeof(char));
-	strcpy(temp_buffer, editor->text_buffer);
-
-	char* line = strtok(temp_buffer, "\n");
-	for (int i = 0; i < editor->cur_y; i++)
-		line = strtok(NULL, "\n");
+	char* line = editor_get_line(editor, editor->cur_y + 1);
+	int len = 0;
+	if (line) len = strlen(line);
 	
-	if ((line) && (editor->cur_x < strlen(line)))
+	// Moving the cursor to right if only there is space
+	if (editor->cur_x < len)
 		editor->cur_x++;
+}
 
-	free(temp_buffer);
+void editor_cur_up(Editor* editor)
+{
+	char* line = editor_get_line(editor, editor->cur_y);
+	int len = 0;
+	if (line) len = strlen(line);
+
+	// Moving the cursor
+	if (len < editor->cur_x)
+		editor->cur_x = len;
+	if (editor->cur_y > 0)
+	 	editor->cur_y--;
+}
+
+void editor_cur_down(Editor* editor)
+{
+	int line_no = editor_get_line_no(editor);
+	if (editor->cur_y + 1 < line_no)
+	{
+		char* line = editor_get_line(editor, editor->cur_y + 2);
+		int len = 0;
+
+		if (line) len = strlen(line);
+		if (len < editor->cur_x)
+			editor->cur_x = len;
+		editor->cur_y++;
+	}
 }
 
 // Editor rendering

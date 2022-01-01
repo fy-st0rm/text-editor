@@ -7,7 +7,7 @@
  * TODO: [ ] Text deletion 
  * TODO: [ ] Scrolling
  * TODO: [ ] Cursor movement
- * TODO: [ ] Fix a bug while inserting between the line
+ * TODO: [X] Fix a bug while inserting between the line
  */
 
 int main()
@@ -60,6 +60,12 @@ int main()
 						break;
 					case SDLK_RIGHT:
 						editor_cur_right(editor);
+						break;
+					case SDLK_UP:
+						editor_cur_up(editor);
+						break;
+					case SDLK_DOWN:
+						editor_cur_down(editor);
 						break;
 				}
 			}
