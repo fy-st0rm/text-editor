@@ -59,10 +59,12 @@ int	editor_get_cur_pos(Editor* editor)
 
 void editor_insert(Editor* editor, char chr)
 {
+	printf("Char %c\n", chr);
 	char* new_buffer = calloc(editor->buffer_len + 1, sizeof(char));
 
+	printf("Calc pos\n");
 	int pos = editor_get_cur_pos(editor);
-	printf("Pos: %d %d\n", pos, editor->buffer_len);
+	printf("Pos: %d Buff_len: %d\n", pos, editor->buffer_len);
 
 	// Inserting character when the cursor is at last position
 	if (pos == editor->buffer_len)
@@ -74,10 +76,10 @@ void editor_insert(Editor* editor, char chr)
 	else
 	{
 		memcpy(new_buffer, editor->text_buffer, pos);
-		char c[1];
+		char c[1] = {0};
 		sprintf(c, "%c", chr);
 		strcpy(new_buffer + pos, c);
-		memcpy(new_buffer + pos + 1, editor->text_buffer + pos, editor->buffer_len - 1);
+		memcpy(new_buffer + pos + 1, editor->text_buffer + pos, editor->buffer_len - pos);
 	}
 
 	free(editor->text_buffer);
@@ -85,6 +87,24 @@ void editor_insert(Editor* editor, char chr)
 	editor->text_buffer = new_buffer;
 	editor->buffer_len++;
 	editor->cur_x++;
+
+	if (chr == '\n')
+	{
+		editor->cur_x = 0;
+		editor->cur_y++;
+	}
+}
+
+void editor_backspace(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor);
+	if (pos)
+	{
+		// overiting the memory in that position with the memory infront of that position
+		memmove(&editor->text_buffer[pos], &editor->text_buffer[pos+1], editor->buffer_len - pos);
+		editor->buffer_len--;
+		editor_cur_left(editor);
+	}
 }
 
 // Editor cursor
@@ -95,7 +115,17 @@ void editor_cur_left(Editor* editor)
 
 void editor_cur_right(Editor* editor)
 {
-	editor->cur_x++;
+	char* temp_buffer = calloc(editor->buffer_len, sizeof(char));
+	strcpy(temp_buffer, editor->text_buffer);
+
+	char* line = strtok(temp_buffer, "\n");
+	for (int i = 0; i < editor->cur_y; i++)
+		line = strtok(NULL, "\n");
+	
+	if ((line) && (editor->cur_x < strlen(line)))
+		editor->cur_x++;
+
+	free(temp_buffer);
 }
 
 // Editor rendering

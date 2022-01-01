@@ -34,6 +34,7 @@ void 			editor_resize		(Editor* editor, Window* window);
 // Editor buffer management
 int				editor_get_cur_pos	(Editor* editor);
 void			editor_insert		(Editor* editor, char chr);
+void			editor_backspace	(Editor* editor);
 
 // Editor cursor
 void			editor_cur_left		(Editor* editor);

@@ -3,10 +3,11 @@
 #include "window.h"
 
 /*
- * TODO: Text insert with cursor position
- * TODO: Text deletion 
- * TODO: Scrolling
- * TODO: Cursor movement
+ * TODO: [X] Text insert with cursor position 
+ * TODO: [ ] Text deletion 
+ * TODO: [ ] Scrolling
+ * TODO: [ ] Cursor movement
+ * TODO: [ ] Fix a bug while inserting between the line
  */
 
 int main()
@@ -30,14 +31,15 @@ int main()
 
 	bool loop = true;
 	SDL_Event event;
-	SDL_Color bg = {165, 165, 165, 255};
-	SDL_Color fg = {255, 0, 0, 255};
+	SDL_Color bg = {0, 0, 0, 255};
+	SDL_Color fg = {255, 255, 255, 255};
 
 	while (loop)
 	{
 		if (SDL_WaitEvent(&event))
 		{
-			if 		(event.type == SDL_QUIT)	 loop = false;
+			if (event.type == SDL_QUIT)
+				loop = false;
 			else if (event.type == SDL_TEXTINPUT)
 			{
 				char* text = event.text.text;
@@ -49,6 +51,9 @@ int main()
 				{
 					case SDLK_RETURN:
 						editor_insert(editor, '\n');
+						break;
+					case SDLK_BACKSPACE:
+						editor_backspace(editor);
 						break;
 					case SDLK_LEFT:
 						editor_cur_left(editor);
