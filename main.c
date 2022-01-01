@@ -4,9 +4,9 @@
 
 /*
  * TODO: [X] Text insert with cursor position 
- * TODO: [ ] Text deletion 
- * TODO: [ ] Scrolling
- * TODO: [ ] Cursor movement
+ * TODO: [X] Text deletion 
+ * TODO: [X] Scrolling
+ * TODO: [X] Cursor movement
  * TODO: [X] Fix a bug while inserting between the line
  */
 
@@ -45,6 +45,15 @@ int main()
 				char* text = event.text.text;
 				editor_insert(editor, text[0]);
 			}
+			/*
+			else if (event.type == SDL_MOUSEWHEEL)
+			{
+				if (event.wheel.y > 0)
+					editor_scroll_up(editor);
+				if (event.wheel.y < 0)
+					editor_scroll_down(editor);
+			}
+			*/
 			else if (event.type == SDL_KEYDOWN)
 			{
 				switch (event.key.keysym.sym)
@@ -55,6 +64,7 @@ int main()
 					case SDLK_BACKSPACE:
 						editor_backspace(editor);
 						break;
+
 					case SDLK_LEFT:
 						editor_cur_left(editor);
 						break;

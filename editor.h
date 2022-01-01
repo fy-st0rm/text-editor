@@ -18,10 +18,14 @@ typedef struct
 {
 	char* text_buffer;
 	int buffer_len;
+	Window* window;
 
 	// Cursor
 	int cur_x, cur_y, cur_w, cur_h;
 	SDL_Color cur_fg;
+	
+	// Scroll
+	int scroll_x, scroll_y;
 
 	SDL_Texture** texture_cache;
 	SDL_Texture* editor_texture;
@@ -43,6 +47,12 @@ void			editor_cur_left		(Editor* editor);
 void			editor_cur_right	(Editor* editor);
 void			editor_cur_up		(Editor* editor);
 void			editor_cur_down		(Editor* editor);
+
+// Editor scrolls
+void			editor_scroll_left	(Editor* editor);
+void			editor_scroll_right (Editor* editor);
+void			editor_scroll_up	(Editor* editor);
+void			editor_scroll_down	(Editor* editor);
 
 // Editor rendering
 void			editor_render_text	(Editor* editor, Window* window, SDL_Color fg, SDL_Color bg);

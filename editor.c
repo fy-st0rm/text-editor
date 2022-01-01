@@ -3,6 +3,7 @@
 Editor* editor_new(Window* window)
 {
 	Editor* editor = (Editor*) malloc(sizeof(Editor));
+	editor->window = window;
 
 	editor->text_buffer = calloc(1, sizeof(char));
 	editor->buffer_len= 0;
@@ -16,6 +17,9 @@ Editor* editor_new(Window* window)
 	editor->cur_h = 0;
 	SDL_Color cur_fg = { 255, 255, 255, 255 };
 	editor->cur_fg = cur_fg;
+
+	editor->scroll_x = 0;
+	editor->scroll_y = 0;
 
 	return editor;
 }
@@ -142,10 +146,15 @@ void editor_backspace(Editor* editor)
 		if (editor->text_buffer[pos] == '\n') 
 		{
 			editor_cur_up(editor);
+			// Setting the cursor x pos to the last pos in the above line
+			char* line = editor_get_line(editor, editor->cur_y);
+			int len = 0;
+			if (line) len = strlen(line);
+			editor->cur_x = len;
 		}
 		// overiting the memory in that position with the memory infront of that position
-		memmove(&editor->text_buffer[pos], &editor->text_buffer[pos+1], strlen(editor->text_buffer) - pos);
-		editor->buffer_len = strlen(editor->text_buffer);
+		memmove(&editor->text_buffer[pos], &editor->text_buffer[pos+1], editor->buffer_len - pos);
+		editor->buffer_len--;
 	}
 }
 
@@ -168,15 +177,18 @@ void editor_cur_right(Editor* editor)
 
 void editor_cur_up(Editor* editor)
 {
-	char* line = editor_get_line(editor, editor->cur_y);
-	int len = 0;
-	if (line) len = strlen(line);
-
-	// Moving the cursor
-	if (len < editor->cur_x)
-		editor->cur_x = len;
 	if (editor->cur_y > 0)
-	 	editor->cur_y--;
+	{
+		char* line = editor_get_line(editor, editor->cur_y);
+		int len = 0;
+
+		if (line) len = strlen(line);
+
+		// Moving the cursor
+		if (len < editor->cur_x)
+			editor->cur_x = len;
+		 editor->cur_y--;
+	}
 }
 
 void editor_cur_down(Editor* editor)
@@ -194,9 +206,52 @@ void editor_cur_down(Editor* editor)
 	}
 }
 
+// Editor scrolls
+void editor_scroll_left(Editor* editor)
+{
+	if (editor->cur_x - editor->scroll_x < 0)
+	{
+		editor->scroll_x += editor->cur_x - editor->scroll_x;
+	}
+}
+
+void editor_scroll_right(Editor* editor)
+{
+	int w;
+	SDL_QueryTexture(editor->editor_texture, NULL, NULL, &w, NULL);
+	if (editor->cur_x - editor->scroll_x > w / editor->cur_w)
+	{
+		int diff = (w / editor->cur_w) - (editor->cur_x - editor->scroll_x) - 1;
+		editor->scroll_x -= diff;
+	}
+}
+
+void editor_scroll_up(Editor* editor)
+{
+	if ((editor->cur_y - editor->scroll_y < 0) && (editor->scroll_y > 0))
+		editor->scroll_y += editor->cur_y - editor->scroll_y;
+}
+
+void editor_scroll_down(Editor* editor)
+{
+	int h;
+	SDL_QueryTexture(editor->editor_texture, NULL, NULL, NULL, &h);
+	if (editor->cur_y - editor->scroll_y > h / editor->cur_h)
+	{
+		int diff = (h / editor->cur_h) - (editor->cur_y - editor->scroll_y);
+		editor->scroll_y -= diff;
+	}
+}
+
 // Editor rendering
 void editor_render_text(Editor* editor, Window* window, SDL_Color fg, SDL_Color bg)
 {
+	// Calling scrolling functions
+	editor_scroll_left (editor);
+	editor_scroll_right(editor);
+	editor_scroll_up   (editor);
+	editor_scroll_down (editor);
+
 	// Setting up the render target
 	SDL_SetRenderTarget(window->renderer, editor->editor_texture);
 	SDL_SetRenderDrawColor(window->renderer, bg.r, bg.g, bg.b, bg.a);
@@ -214,13 +269,13 @@ void editor_render_text(Editor* editor, Window* window, SDL_Color fg, SDL_Color 
 		}
 		else
 		{
-			draw_text(window->renderer, x, y, editor->texture_cache[index - CHAR_START], fg); 
+			draw_text(window->renderer, x - editor->scroll_x, y - editor->scroll_y, editor->texture_cache[index - CHAR_START], fg); 
 			x++;
 		}
 	}
 
 	// Rendering cursor
-	SDL_Rect cur_rect = { editor->cur_x * editor->cur_w, editor->cur_y * editor->cur_h, editor->cur_w, editor->cur_h };
+	SDL_Rect cur_rect = { (editor->cur_x - editor->scroll_x) * editor->cur_w,  (editor->cur_y - editor->scroll_y) * editor->cur_h , editor->cur_w, editor->cur_h };
 	SDL_SetRenderDrawColor(window->renderer, editor->cur_fg.r, editor->cur_fg.g, editor->cur_fg.b, editor->cur_fg.a);
 	SDL_RenderFillRect(window->renderer, &cur_rect); 
 	
