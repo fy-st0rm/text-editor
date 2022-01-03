@@ -29,6 +29,8 @@ typedef struct
 
 	SDL_Texture** texture_cache;
 	SDL_Texture* editor_texture;
+	SDL_Texture* line_texture;
+	SDL_Texture* command_texture;
 } Editor;
 
 Editor* 		editor_new			(Window* window);
@@ -55,7 +57,7 @@ void			editor_scroll_up	(Editor* editor);
 void			editor_scroll_down	(Editor* editor);
 
 // Editor rendering
-void			editor_render_text	(Editor* editor, Window* window, SDL_Color fg, SDL_Color bg);
+void			editor_render_text	(Editor* editor, Window* window, TTF_Font* font, SDL_Color fg, SDL_Color bg);
 void			editor_gen_tex_cache(Editor* editor, SDL_Renderer* renderer, TTF_Font* font);
 
 // Render helper function

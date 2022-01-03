@@ -3,6 +3,11 @@
 #include "window.h"
 
 /*
+ * TODO: [ ] Fix the crash when moving cursor down when reached last line where last line is empty
+ * TODO: [ ] Render only visible characters
+ * TODO: [ ] Line buffer and command buffer
+ * TODO: [ ] Read and write to the file
+ * TODO: [ ] Clipboard handling
  * TODO: [X] Text insert with cursor position 
  * TODO: [X] Text deletion 
  * TODO: [X] Scrolling
@@ -92,7 +97,7 @@ int main()
 			}
 
 			window_clear(window, bg); 
-			editor_render_text(editor, window, fg, bg);
+			editor_render_text(editor, window, font, fg, bg);
 		}
 	}
 
