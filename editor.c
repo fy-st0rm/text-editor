@@ -1,15 +1,15 @@
 #include "editor.h"
 
-Editor* editor_new(Window* window)
+Editor* editor_new(Window* window, char* file_name)
 {
 	Editor* editor = (Editor*) malloc(sizeof(Editor));
 	editor->window = window;
 
+	editor->file_name = file_name;
 	editor->text_buffer = calloc(1, sizeof(char));
 	editor->buffer_len= 0;
 
 	editor->texture_cache = malloc(sizeof(SDL_Texture*) * MAX_TEXTURE);
-	editor->editor_texture = sdl_check_ptr(SDL_CreateTexture(window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, window->width, window->height));
 
 	editor->cur_x = 0;
 	editor->cur_y = 0;
@@ -35,7 +35,12 @@ void editor_destroy(Editor* editor)
 void editor_resize(Editor* editor, Window* window)
 {
 	SDL_DestroyTexture(editor->editor_texture);
+	SDL_DestroyTexture(editor->line_texture);
+	SDL_DestroyTexture(editor->command_texture);
+
 	editor->editor_texture = sdl_check_ptr(SDL_CreateTexture(window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, window->width, window->height));
+	editor->line_texture = sdl_check_ptr(SDL_CreateTexture(window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->cur_w * 4, editor->window->height));
+	editor->command_texture = sdl_check_ptr(SDL_CreateTexture(window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width, editor->cur_h + 4));
 }
 
 // Editor buffer management
@@ -74,7 +79,7 @@ int editor_get_line_no(Editor* editor)
 char* editor_get_line(Editor* editor, int line_no)
 {
 	// Gets the string of the particular line no
-	char* line;
+	char* line = calloc(1, sizeof(char));
 	int start = 0, end = 0, lines = 0;
 	for (int i = 0; i < editor->buffer_len; i++)
 	{
@@ -147,9 +152,13 @@ void editor_backspace(Editor* editor)
 		{
 			editor_cur_up(editor);
 			// Setting the cursor x pos to the last pos in the above line
-			char* line = editor_get_line(editor, editor->cur_y);
+			char* line = editor_get_line(editor, editor->cur_y + 1);
 			int len = 0;
-			if (line) len = strlen(line);
+			if (line) 
+			{
+				len = strlen(line) - 1;
+				free(line);
+			}
 			editor->cur_x = len;
 		}
 		// overiting the memory in that position with the memory infront of that position
@@ -168,7 +177,12 @@ void editor_cur_right(Editor* editor)
 {
 	char* line = editor_get_line(editor, editor->cur_y + 1);
 	int len = 0;
-	if (line) len = strlen(line);
+
+	if (line) 
+	{
+		len = strlen(line);
+		free(line);
+	}
 	
 	// Moving the cursor to right if only there is space
 	if (editor->cur_x < len)
@@ -182,7 +196,11 @@ void editor_cur_up(Editor* editor)
 		char* line = editor_get_line(editor, editor->cur_y);
 		int len = 0;
 
-		if (line) len = strlen(line);
+		if (line) 
+		{
+			len = strlen(line);
+			free(line);
+		}
 
 		// Moving the cursor
 		if (len < editor->cur_x)
@@ -196,15 +214,18 @@ void editor_cur_down(Editor* editor)
 	int line_no = editor_get_line_no(editor);
 	if (editor->cur_y + 1 < line_no)
 	{
-		printf("Getting line\n");
 		char* line = editor_get_line(editor, editor->cur_y + 2);
 		int len = 0;
 		
-		if (line) len = strlen(line);
+		if (line) 
+		{
+			len = strlen(line);
+			free(line);
+		}
+
 		if (len < editor->cur_x)
 			editor->cur_x = len;
 		editor->cur_y++;
-		printf("Got down\n");
 	}
 }
 
@@ -221,9 +242,9 @@ void editor_scroll_right(Editor* editor)
 {
 	int w;
 	SDL_QueryTexture(editor->editor_texture, NULL, NULL, &w, NULL);
-	if (editor->cur_x - editor->scroll_x > w / editor->cur_w)
+	if (editor->cur_x - editor->scroll_x >= (w - editor->cur_w * 4) / editor->cur_w)
 	{
-		int diff = (w / editor->cur_w) - (editor->cur_x - editor->scroll_x) - 1;
+		int diff = ((w - editor->cur_w * 4)/ editor->cur_w) - (editor->cur_x - editor->scroll_x) - 1;
 		editor->scroll_x -= diff;
 	}
 }
@@ -238,9 +259,9 @@ void editor_scroll_down(Editor* editor)
 {
 	int h;
 	SDL_QueryTexture(editor->editor_texture, NULL, NULL, NULL, &h);
-	if (editor->cur_y - editor->scroll_y > h / editor->cur_h)
+	if (editor->cur_y - editor->scroll_y > (h - editor->cur_h)  / editor->cur_h)
 	{
-		int diff = (h / editor->cur_h) - (editor->cur_y - editor->scroll_y);
+		int diff = ((h - editor->cur_h) / editor->cur_h) - (editor->cur_y - editor->scroll_y);
 		editor->scroll_y -= diff;
 	}
 }
@@ -296,16 +317,41 @@ void editor_render_text(Editor* editor, Window* window, TTF_Font* font, SDL_Colo
 	    SDL_DestroyTexture(texture);	
 	}
 	
+	// Setting up the render target for the command buffer
+	SDL_SetRenderTarget(window->renderer, editor->command_texture);
+	SDL_SetRenderDrawColor(window->renderer, bg.r, bg.g, bg.b, bg.a);
+	SDL_RenderClear(window->renderer);
+	
+	// Rendering the cursor position
+	char cur_pos[5+1+5] = {0};
+	sprintf(cur_pos, "%d:%d", editor->cur_x, editor->cur_y);
+
+	SDL_Texture* cur_pos_texture = create_texture(window->renderer, font, cur_pos);
+    int w, h; 
+	SDL_QueryTexture(cur_pos_texture, NULL, NULL, &w, &h);
+	SDL_Rect pos = { window->width - w - 5, 0, w, h };
+	SDL_RenderCopy(window->renderer, cur_pos_texture, NULL, &pos);
+	SDL_DestroyTexture(cur_pos_texture);
+
+	// Rendering file name
+	SDL_Texture* file_name = create_texture(window->renderer, font, editor->file_name);
+	draw_text(window->renderer, 0, 0, file_name, fg);
+	SDL_DestroyTexture(file_name);
+
 	// Switching the render target to the screen and rendering the texture into the screen
 	SDL_SetRenderTarget(window->renderer, NULL);
-
-	// Rendering line buffer
-	SDL_Rect line_rect = { 0, 0, editor->cur_w * 4, window->height };
-	SDL_RenderCopy(window->renderer, editor->line_texture, NULL, &line_rect);
 
 	// Rendering texture buffer
 	SDL_Rect texture_rect = { editor->cur_w * 4, 0, window->width, window->height };
 	SDL_RenderCopy(window->renderer, editor->editor_texture, NULL, &texture_rect);
+
+	// Rendering line buffer
+	SDL_Rect line_rect = { 0, 0, editor->cur_w * 4, window->height };
+	SDL_RenderCopy(window->renderer, editor->line_texture, NULL, &line_rect);
+	
+	// Rendering command line buffer
+	SDL_Rect cmd_line_rect = { 0, editor->window->height - editor->cur_h, editor->window->width, editor->cur_h };
+	SDL_RenderCopy(window->renderer, editor->command_texture, NULL, &cmd_line_rect);
 }
 
 void editor_gen_tex_cache(Editor* editor, SDL_Renderer* renderer, TTF_Font* font)
@@ -321,9 +367,10 @@ void editor_gen_tex_cache(Editor* editor, SDL_Renderer* renderer, TTF_Font* font
 
 	SDL_QueryTexture(editor->texture_cache[0], NULL, NULL, &editor->cur_w, &editor->cur_h);
 
-	// Creating texture for line and command buffer
+	// Generating textures for the buffers
+	editor->editor_texture = sdl_check_ptr(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width , editor->window->height));
 	editor->line_texture = sdl_check_ptr(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->cur_w * 4, editor->window->height));
-	editor->command_texture = sdl_check_ptr(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width, editor->cur_h + 4));
+	editor->command_texture = sdl_check_ptr(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width, editor->cur_h));
 }
 
 SDL_Texture* create_texture(SDL_Renderer* renderer, TTF_Font* font, char* text)

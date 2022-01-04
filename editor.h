@@ -16,6 +16,7 @@ typedef struct
 
 typedef struct
 {
+	char* file_name;
 	char* text_buffer;
 	int buffer_len;
 	Window* window;
@@ -33,7 +34,7 @@ typedef struct
 	SDL_Texture* command_texture;
 } Editor;
 
-Editor* 		editor_new			(Window* window);
+Editor* 		editor_new			(Window* window, char* file_name);
 void			editor_destroy		(Editor* editor);
 void 			editor_resize		(Editor* editor, Window* window);
 

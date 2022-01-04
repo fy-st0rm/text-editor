@@ -8,6 +8,7 @@
  * TODO: [ ] Line buffer and command buffer
  * TODO: [ ] Read and write to the file
  * TODO: [ ] Clipboard handling
+ * TODO: [X] There is a memory leak where we use editor_get_line() function
  * TODO: [X] Text insert with cursor position 
  * TODO: [X] Text deletion 
  * TODO: [X] Scrolling
@@ -26,7 +27,8 @@ int main()
 	TTF_Font* font = sdl_check_ptr(TTF_OpenFont(font_path, font_size));
 
 	Window* window = window_new("Text Editor", 800, 600);
-	Editor* editor = editor_new(window);
+	char* file_name = "Test.txt";
+	Editor* editor = editor_new(window, file_name);
 
 	editor_gen_tex_cache(editor, window->renderer, font);
 	for (int i = 0; i < MAX_TEXTURE; i++)
