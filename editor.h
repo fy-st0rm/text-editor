@@ -4,15 +4,10 @@
 #include "util.h"
 #include "window.h"
 
-#define MAX_TEXTURE 93
+#define TAB_SIZE 	4
+#define MAX_TEXTURE 95
 #define CHAR_START  32
 #define CHAR_END	127
-
-typedef struct
-{
-	char chr;
-	SDL_Color fg, bg;
-} Cell;
 
 typedef struct
 {
@@ -22,7 +17,7 @@ typedef struct
 	Window* window;
 
 	// Cursor
-	int cur_x, cur_y, cur_w, cur_h;
+	int cur_x, cur_y, cur_rend_x, cur_rend_y, cur_w, cur_h;
 	SDL_Color cur_fg;
 	
 	// Scroll
@@ -37,6 +32,9 @@ typedef struct
 Editor* 		editor_new			(Window* window, char* file_name);
 void			editor_destroy		(Editor* editor);
 void 			editor_resize		(Editor* editor, Window* window);
+
+// Editor file handling
+void			editor_read_file	(Editor* editor);
 
 // Editor buffer management
 int				editor_get_cur_pos	(Editor* editor);
@@ -60,6 +58,7 @@ void			editor_scroll_down	(Editor* editor);
 // Editor rendering
 void			editor_render_text	(Editor* editor, Window* window, TTF_Font* font, SDL_Color fg, SDL_Color bg);
 void			editor_gen_tex_cache(Editor* editor, SDL_Renderer* renderer, TTF_Font* font);
+void			editor_draw_line	(Editor* editor, int x, int y, SDL_Texture* texture, SDL_Color color);
 
 // Render helper function
 SDL_Texture* 	create_texture		(SDL_Renderer* renderer, TTF_Font* font, char* text);

@@ -3,11 +3,13 @@
 #include "window.h"
 
 /*
- * TODO: [ ] Fix the crash when moving cursor down when reached last line where last line is empty
  * TODO: [ ] Render only visible characters
- * TODO: [ ] Line buffer and command buffer
+ * TODO: [ ] Deal with tabs
+ * TODO: [ ] Fix the memory leak while resizing the window
  * TODO: [ ] Read and write to the file
  * TODO: [ ] Clipboard handling
+ * TODO: [X] Fix the corrupted characters
+ * TODO: [X] Line buffer and command buffer
  * TODO: [X] There is a memory leak where we use editor_get_line() function
  * TODO: [X] Text insert with cursor position 
  * TODO: [X] Text deletion 
@@ -16,25 +18,22 @@
  * TODO: [X] Fix a bug while inserting between the line
  */
 
-int main()
+int main(int argc, char** argv)
 {
 	sdl_check(SDL_Init(SDL_INIT_VIDEO));
 	sdl_check(TTF_Init());
 
 	// Loading font
 	char* font_path = "JetBrainsMonoNL-Regular.ttf";
-	int font_size = 32;
+	int font_size = 16;
 	TTF_Font* font = sdl_check_ptr(TTF_OpenFont(font_path, font_size));
 
 	Window* window = window_new("Text Editor", 800, 600);
-	char* file_name = "Test.txt";
+	char* file_name = "editor.c";
 	Editor* editor = editor_new(window, file_name);
 
 	editor_gen_tex_cache(editor, window->renderer, font);
-	for (int i = 0; i < MAX_TEXTURE; i++)
-	{
-		printf("%d %p\n", i, editor->texture_cache[i]);
-	}
+	editor_read_file(editor);
 
 	bool loop = true;
 	SDL_Event event;
@@ -67,6 +66,10 @@ int main()
 				{
 					case SDLK_RETURN:
 						editor_insert(editor, '\n');
+						break;
+					case SDLK_TAB:
+						//for (int i = 0; i < 4; i++) editor_insert(editor, ' ');
+						editor_insert(editor, '\t');
 						break;
 					case SDLK_BACKSPACE:
 						editor_backspace(editor);

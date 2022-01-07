@@ -17,7 +17,7 @@ static void* sdl_check_ptr(void* result)
 {
 	if (!result)
 	{
-		fprintf(stderr, "ERROR: %s\n", SDL_GetError());
+		fprintf(stderr, "PTR ERROR: %s\n", SDL_GetError());
 		exit(1);
 	}
 	return result;
