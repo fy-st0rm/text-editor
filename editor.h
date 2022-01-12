@@ -37,9 +37,10 @@ void 			editor_resize		(Editor* editor, Window* window);
 void			editor_read_file	(Editor* editor);
 
 // Editor buffer management
-int				editor_get_cur_pos	(Editor* editor);
+int				editor_get_cur_pos	(Editor* editor, int x, int y);
 int				editor_get_line_no	(Editor* editor);
-char*			editor_get_line		(Editor* editor, int line_no);
+void			editor_get_line		(Editor* editor, int line_no, char* out);
+int				editor_line_len		(Editor* editor, int line_no);
 void			editor_insert		(Editor* editor, char chr);
 void			editor_backspace	(Editor* editor);
 

@@ -3,11 +3,12 @@
 #include "window.h"
 
 /*
- * TODO: [ ] Render only visible characters
- * TODO: [ ] Deal with tabs
  * TODO: [ ] Fix the memory leak while resizing the window
  * TODO: [ ] Read and write to the file
  * TODO: [ ] Clipboard handling
+ * TODO: [ ] Text selection
+ * TODO: [X] Deal with tabs
+ * TODO: [X] Render only visible characters
  * TODO: [X] Fix the corrupted characters
  * TODO: [X] Line buffer and command buffer
  * TODO: [X] There is a memory leak where we use editor_get_line() function
@@ -22,6 +23,8 @@ int main(int argc, char** argv)
 {
 	sdl_check(SDL_Init(SDL_INIT_VIDEO));
 	sdl_check(TTF_Init());
+
+	atexit(report_mem_leak);
 
 	// Loading font
 	char* font_path = "JetBrainsMonoNL-Regular.ttf";

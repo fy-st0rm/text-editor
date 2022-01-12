@@ -73,7 +73,7 @@ void editor_read_file(Editor* editor)
 }
 
 // Editor buffer management
-int	editor_get_cur_pos(Editor* editor)
+int	editor_get_cur_pos(Editor* editor, int x, int y)
 {
 	// Calculates the position of the cursor in the 1D text buffer
 	int pos = 0;
@@ -81,7 +81,7 @@ int	editor_get_cur_pos(Editor* editor)
 	int line = 0;
 	for (int i = 0; i < editor->buffer_len; i++)
 	{
-		if (line == editor->cur_y) break;
+		if (line == y) break;
 		if (editor->text_buffer[i] == '\n') 
 		{
 			pos += index + 1;
@@ -91,7 +91,7 @@ int	editor_get_cur_pos(Editor* editor)
 		else
 			index++;
 	}
-	pos += editor->cur_x;
+	pos += x;
 	return pos;
 }
 
@@ -105,11 +105,9 @@ int editor_get_line_no(Editor* editor)
 	return line_no;
 }
 
-char* editor_get_line(Editor* editor, int line_no)
+int editor_line_len(Editor* editor, int line_no)
 {
-	// Gets the string of the particular line no
-	char* line = calloc(1, sizeof(char));
-	int start = 0, end = 0, lines = 0;
+	int size = 0, start = 0, end = 0, lines = 0;
 	for (int i = 0; i < editor->buffer_len; i++)
 	{
 		if ((editor->text_buffer[i] == '\n') || (i + 1 == editor->buffer_len))
@@ -118,10 +116,7 @@ char* editor_get_line(Editor* editor, int line_no)
 			if (lines == line_no)
 			{
 				if (editor->buffer_len == end + 1) end++;
-				int size = end - start;
-				line = calloc(size + 1, sizeof(char));
-				memcpy(line, editor->text_buffer+start, size);
-				strcpy(line + size, "\0");
+				size = end - start;
 				break;
 			}
 			else
@@ -135,14 +130,44 @@ char* editor_get_line(Editor* editor, int line_no)
 			end++;
 		}
 	}
-	return line;
+	return size;
+}
+
+void editor_get_line(Editor* editor, int line_no, char* out)
+{
+	// Gets the string of the particular line no
+	int start = 0, end = 0, lines = 0;
+	for (int i = 0; i < editor->buffer_len; i++)
+	{
+		if ((editor->text_buffer[i] == '\n') || (i + 1 == editor->buffer_len))
+		{	
+			lines++;
+			if (lines == line_no)
+			{
+				if (editor->buffer_len == end + 1) end++;
+				int size = end - start;
+				memcpy(out, editor->text_buffer+start, size);
+				strcpy(out + size, "\0");
+				break;
+			}
+			else
+			{
+				end++;
+				start = end;
+			}
+		}
+		else
+		{
+			end++;
+		}
+	}
 }
 
 void editor_insert(Editor* editor, char chr)
 {
 	char* new_buffer = calloc(editor->buffer_len + 1, sizeof(char));
 
-	int pos = editor_get_cur_pos(editor);
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
 
 	// Inserting character when the cursor is at last position
 	if (pos == editor->buffer_len)
@@ -184,7 +209,7 @@ void editor_insert(Editor* editor, char chr)
 
 void editor_backspace(Editor* editor)
 {
-	int pos = editor_get_cur_pos(editor) - 1;
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y) - 1;
 	if (pos >= 0)
 	{
 		editor->cur_x--;
@@ -196,11 +221,15 @@ void editor_backspace(Editor* editor)
 			editor->cur_rend_x -= TAB_SIZE - 1;
 		}
 
-		if (editor->cur_x < 0)
+		if (editor->cur_x < 0 || editor->cur_rend_x < 0)
 		{
 			editor_cur_up(editor);
+
 			// Setting the cursor x pos to the last pos in the above line
-			char* line = editor_get_line(editor, editor->cur_y + 1);
+			int size = editor_line_len(editor, editor->cur_y + 1);
+			char line[size];
+			editor_get_line(editor, editor->cur_y + 1, line);
+
 			int len = 0;
 			if (line) 
 			{
@@ -214,9 +243,8 @@ void editor_backspace(Editor* editor)
 			{
 				if (line[i] == '\t') editor->cur_rend_x += TAB_SIZE - 1;
 			}
-			
-			free(line);
 		}
+
 		// overiting the memory in that position with the memory infront of that position
 		memmove(&editor->text_buffer[pos], &editor->text_buffer[pos+1], editor->buffer_len - pos);
 		editor->buffer_len--;
@@ -230,7 +258,7 @@ void editor_cur_left(Editor* editor)
 	{
 		editor->cur_x--;
 		editor->cur_rend_x--;
-		int pos = editor_get_cur_pos(editor);
+		int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
 		
 		// Jumping when there is tab
 		if (editor->text_buffer[pos] == '\t')
@@ -240,19 +268,21 @@ void editor_cur_left(Editor* editor)
 
 void editor_cur_right(Editor* editor)
 {
-	char* line = editor_get_line(editor, editor->cur_y + 1);
+	int size = editor_line_len(editor, editor->cur_y + 1);
+	char line[size];
+	editor_get_line(editor, editor->cur_y + 1, line);
+
 	int len = 0;
 
 	if (line) 
 	{
 		len = strlen(line);
-		free(line);
 	}
 	
 	// Moving the cursor to right if only there is space
 	if (editor->cur_x < len)
 	{
-		int pos = editor_get_cur_pos(editor);
+		int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
 		editor->cur_x++;
 		editor->cur_rend_x++;
 
@@ -266,23 +296,45 @@ void editor_cur_up(Editor* editor)
 {
 	if (editor->cur_y > 0)
 	{
-		char* line = editor_get_line(editor, editor->cur_y);
+		int size = editor_line_len(editor, editor->cur_y);
+		char line[size];
+		editor_get_line(editor, editor->cur_y, line);
+		
 		int len = 0;
 
 		if (line) 
 		{
 			len = strlen(line);
-			free(line);
 		}
 
 		// Moving the cursor
-		if (len < editor->cur_x)
+		if (len < editor->cur_x || len < editor->cur_rend_x)
 		{
 			editor->cur_x = len;
 			editor->cur_rend_x = len;
 		}
+
  		editor->cur_y--;
  		editor->cur_rend_y--;
+
+		int pos = 0;
+		for (int i = 0; i < len; i++)
+		{
+			if (line[i] != '\t')
+				break;
+			pos += TAB_SIZE;
+		}
+
+		if (0 <= editor->cur_rend_x && editor->cur_rend_x < pos)
+		{
+			editor->cur_rend_x += pos - editor->cur_rend_x;
+			editor->cur_x = 0;
+			editor->cur_x += pos / TAB_SIZE;
+		}
+		else
+		{
+			editor->cur_x = editor->cur_rend_x - editor->cur_x;
+		}
 	}
 }
 
@@ -291,22 +343,48 @@ void editor_cur_down(Editor* editor)
 	int line_no = editor_get_line_no(editor);
 	if (editor->cur_y + 1 < line_no)
 	{
-		char* line = editor_get_line(editor, editor->cur_y + 2);
+		int size = editor_line_len(editor, editor->cur_y + 2);
+		char line[size];
+		editor_get_line(editor, editor->cur_y + 2, line);
+
 		int len = 0;
 		
 		if (line) 
 		{
 			len = strlen(line);
-			free(line);
 		}
 
-		if (len < editor->cur_x)
+		// Changing X axis
+		if (len < editor->cur_x || len < editor->cur_rend_x)
 		{
 			editor->cur_x = len;
 			editor->cur_rend_x = len;
 		}
+
+		// Changing Y axis
 		editor->cur_y++;
 		editor->cur_rend_y++;
+
+		// Calculating the tab size in the begining of the line
+		int pos = 0;
+		for (int i = 0; i < len; i++)
+		{
+			if (line[i] != '\t')
+				break;
+			pos += TAB_SIZE;
+		}
+
+		// Jumping if there is a tab
+		if (0 <= editor->cur_rend_x && editor->cur_rend_x < pos)
+		{
+			editor->cur_rend_x += pos - editor->cur_rend_x;
+			editor->cur_x = 0;
+			editor->cur_x += pos / TAB_SIZE;
+		}
+		else
+		{
+			editor->cur_x = editor->cur_rend_x - editor->cur_x;
+		}
 	}
 }
 
@@ -384,25 +462,27 @@ void editor_render_text(Editor* editor, Window* window, TTF_Font* font, SDL_Colo
 	// Flushing the buffer into the render target
 	for (int y = 0, i = start; i < end + 1; y++, i++)
 	{
-		char* line = editor_get_line(editor, i);
-		int len = strlen(line);
+		int size = editor_line_len(editor, i);
+		char line[size];
+		editor_get_line(editor, i, line);
 
-		if (len > 0)
+		if (size > 0)
 		{
 			// Adding 4 bytes for the each tabs
-			int buff_size = len;
-			for (int i = 0; i < len; i++)
+			int buff_size = size;
+			for (int i = 0; i < size; i++)
 			{
-				if (line[i] == '\t') buff_size += TAB_SIZE;
+				if (line[i] == '\t') buff_size += TAB_SIZE - 1;
 			}
-			char* text = calloc(buff_size, sizeof(char));
 
-			for (int k = 0, j = 0; j < len; j++)
+			char text[buff_size + 1];
+
+			for (int k = 0, j = 0; j < size; j++)
 			{
 				char ch = line[j];
 				if (ch == '\t')
 				{
-					for (int i = 0; i < TAB_SIZE; i++) text[k+i] = ' ';
+					for (int i = 0; i < TAB_SIZE; i++) text[k+i] = '-';
 					k += TAB_SIZE;
 				}
 				else if (ch != '\n')
@@ -410,32 +490,19 @@ void editor_render_text(Editor* editor, Window* window, TTF_Font* font, SDL_Colo
 					text[k] = line[j];
 					k++;
 				}
+				else if (ch == '\n')
+				{
+					text[k] = ' ';
+					k++;
+				}
 			}
+			text[buff_size] = '\0';
 
 			SDL_Texture* texture = create_texture(window->renderer, font, text); 
 			editor_draw_line(editor, -editor->scroll_x, y, texture, fg);
 			SDL_DestroyTexture(texture);	
-			free(text);
 		}
-		free(line);
 	}
-
-	/*
-	int x = 0, y = 0;
-	for (int i = 0; i < editor->buffer_len; i++)
-	{
-		int index = editor->text_buffer[i];
-		if (index == 10) // 10 == \n When changing the line
-		{
-			x = 0;
-			y++;
-		}
-		else
-		{
-			draw_text(window->renderer, x - editor->scroll_x, y - editor->scroll_y, editor->texture_cache[index - CHAR_START], fg);
-			x++;
-		}
-	}*/
 
 	// Rendering cursor
 	SDL_Rect cur_rect = { (editor->cur_rend_x - editor->scroll_x) * editor->cur_w,  (editor->cur_rend_y - editor->scroll_y) * editor->cur_h , editor->cur_w, editor->cur_h };
