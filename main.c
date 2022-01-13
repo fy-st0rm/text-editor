@@ -3,6 +3,7 @@
 #include "window.h"
 
 /*
+ * TODO: [ ] Proper cursor movement
  * TODO: [ ] Fix the memory leak while resizing the window
  * TODO: [ ] Read and write to the file
  * TODO: [ ] Clipboard handling
@@ -35,7 +36,7 @@ int main(int argc, char** argv)
 	char* file_name = "editor.c";
 	Editor* editor = editor_new(window, file_name);
 
-	editor_gen_tex_cache(editor, window->renderer, font);
+	editor_gen_texture(editor, window->renderer, font);
 	editor_read_file(editor);
 
 	bool loop = true;
@@ -54,15 +55,6 @@ int main(int argc, char** argv)
 				char* text = event.text.text;
 				editor_insert(editor, text[0]);
 			}
-			/*
-			else if (event.type == SDL_MOUSEWHEEL)
-			{
-				if (event.wheel.y > 0)
-					editor_scroll_up(editor);
-				if (event.wheel.y < 0)
-					editor_scroll_down(editor);
-			}
-			*/
 			else if (event.type == SDL_KEYDOWN)
 			{
 				switch (event.key.keysym.sym)
@@ -97,15 +89,14 @@ int main(int argc, char** argv)
 				switch (event.window.event)
 				{
 					case SDL_WINDOWEVENT_RESIZED:
-						window->width  = event.window.data1;
-						window->height = event.window.data2;
-						editor_resize(editor, window);
+						SDL_GetWindowSize(window->window, &window->width, &window->height);
+						editor_resize(editor);
 						break;
 				}
 			}
 
 			window_clear(window, bg); 
-			editor_render_text(editor, window, font, fg, bg);
+			editor_render(editor, window, font, fg, bg);
 		}
 	}
 

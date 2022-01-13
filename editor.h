@@ -23,15 +23,14 @@ typedef struct
 	// Scroll
 	int scroll_x, scroll_y;
 
-	SDL_Texture** texture_cache;
 	SDL_Texture* editor_texture;
 	SDL_Texture* line_texture;
-	SDL_Texture* command_texture;
+	SDL_Texture* bar_texture;
 } Editor;
 
 Editor* 		editor_new			(Window* window, char* file_name);
 void			editor_destroy		(Editor* editor);
-void 			editor_resize		(Editor* editor, Window* window);
+void 			editor_resize		(Editor* editor);
 
 // Editor file handling
 void			editor_read_file	(Editor* editor);
@@ -57,8 +56,11 @@ void			editor_scroll_up	(Editor* editor);
 void			editor_scroll_down	(Editor* editor);
 
 // Editor rendering
-void			editor_render_text	(Editor* editor, Window* window, TTF_Font* font, SDL_Color fg, SDL_Color bg);
-void			editor_gen_tex_cache(Editor* editor, SDL_Renderer* renderer, TTF_Font* font);
+void			editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, SDL_Color fg, SDL_Color bg);
+void 			editor_render_line	(Editor* editor, int start, int end, TTF_Font* font, SDL_Color fg, SDL_Color bg);
+void			editor_render_bar	(Editor* editor, TTF_Font* font, SDL_Color fg, SDL_Color bg);
+void			editor_render		(Editor* editor, Window* window, TTF_Font* font, SDL_Color fg, SDL_Color bg);
+void			editor_gen_texture	(Editor* editor, SDL_Renderer* renderer, TTF_Font* font);
 void			editor_draw_line	(Editor* editor, int x, int y, SDL_Texture* texture, SDL_Color color);
 
 // Render helper function
