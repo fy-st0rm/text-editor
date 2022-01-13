@@ -6,6 +6,7 @@ Window* window_new(char* title, int w, int h)
 
 	window->width = w;
 	window->height = h;
+	window->mode = NORMAL;
 
 	window->window = sdl_check_ptr(SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, SDL_WINDOW_RESIZABLE));
 	window->renderer = sdl_check_ptr(SDL_CreateRenderer(window->window, -1, SDL_RENDERER_ACCELERATED));

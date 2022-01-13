@@ -1,13 +1,15 @@
-#include "util.h"
+#include "globals.h"
 #include "editor.h"
 #include "window.h"
 
 /*
- * TODO: [ ] Proper cursor movement
+ * TODO: [ ] Vim like modes (NORMAL, INSERT, COMMAND, VISUAL)
+ * TODO: [ ] Colors
  * TODO: [ ] Fix the memory leak while resizing the window
  * TODO: [ ] Read and write to the file
  * TODO: [ ] Clipboard handling
  * TODO: [ ] Text selection
+ * TODO: [X] Proper cursor movement
  * TODO: [X] Deal with tabs
  * TODO: [X] Render only visible characters
  * TODO: [X] Fix the corrupted characters
@@ -20,12 +22,60 @@
  * TODO: [X] Fix a bug while inserting between the line
  */
 
+void arrow_movement(Editor* editor, SDL_Event event)
+{
+	switch (event.key.keysym.sym)
+	{
+		// Cursor movements
+		case SDLK_LEFT:
+			editor_cur_left(editor);
+			break;
+
+		case SDLK_RIGHT:
+			editor_cur_right(editor);
+			break;
+
+		case SDLK_UP:
+			editor_cur_up(editor);
+			break;
+
+		case SDLK_DOWN:
+			editor_cur_down(editor);
+			break;
+	}
+}
+
+void hjkl_movement(Editor* editor, SDL_Event event)
+{
+	switch (event.key.keysym.sym)
+	{
+		// Cursor movements
+		case SDLK_h:
+			editor_cur_left(editor);
+			break;
+
+		case SDLK_l:
+			editor_cur_right(editor);
+			break;
+
+		case SDLK_k:
+			editor_cur_up(editor);
+			break;
+
+		case SDLK_j:
+			editor_cur_down(editor);
+			break;
+	}
+}
+
 int main(int argc, char** argv)
 {
 	sdl_check(SDL_Init(SDL_INIT_VIDEO));
 	sdl_check(TTF_Init());
 
 	atexit(report_mem_leak);
+	
+	init_colors();
 
 	// Loading font
 	char* font_path = "JetBrainsMonoNL-Regular.ttf";
@@ -41,47 +91,62 @@ int main(int argc, char** argv)
 
 	bool loop = true;
 	SDL_Event event;
-	SDL_Color bg = {0, 0, 0, 255};
-	SDL_Color fg = {255, 255, 255, 255};
+
+	// Frame stuff
+	int fps = 75;
+	int frame_delay = 1000 / fps;
+	Uint32 frame_start;
+	int frame_time;
 
 	while (loop)
 	{
 		if (SDL_WaitEvent(&event))
 		{
+			frame_start = SDL_GetTicks();
+
 			if (event.type == SDL_QUIT)
 				loop = false;
-			else if (event.type == SDL_TEXTINPUT)
+			else if (event.type == SDL_TEXTINPUT && window->mode == INSERT)
 			{
 				char* text = event.text.text;
 				editor_insert(editor, text[0]);
 			}
 			else if (event.type == SDL_KEYDOWN)
 			{
-				switch (event.key.keysym.sym)
+				// INSERT MODE SPECIFIC
+				if (window->mode == INSERT)
 				{
-					case SDLK_RETURN:
-						editor_insert(editor, '\n');
-						break;
-					case SDLK_TAB:
-						//for (int i = 0; i < 4; i++) editor_insert(editor, ' ');
-						editor_insert(editor, '\t');
-						break;
-					case SDLK_BACKSPACE:
-						editor_backspace(editor);
-						break;
+					switch (event.key.keysym.sym)
+					{
+						case SDLK_RETURN:
+							editor_insert(editor, '\n');
+							break;
+						case SDLK_TAB:
+							editor_insert(editor, '\t');
+							break;
+						case SDLK_BACKSPACE:
+							editor_backspace(editor);
+							break;
 
-					case SDLK_LEFT:
-						editor_cur_left(editor);
-						break;
-					case SDLK_RIGHT:
-						editor_cur_right(editor);
-						break;
-					case SDLK_UP:
-						editor_cur_up(editor);
-						break;
-					case SDLK_DOWN:
-						editor_cur_down(editor);
-						break;
+						// Mode switcher
+						case SDLK_ESCAPE:
+							window->mode = NORMAL;
+							break;
+					}
+					arrow_movement(editor, event);
+				}
+				// NORMAL MODE SPECIFIC
+				else if (window->mode == NORMAL)
+				{
+					switch (event.key.keysym.sym)
+					{
+						// Mode switcher
+						case SDLK_i:
+							window->mode = INSERT;
+							break;
+					}
+					hjkl_movement(editor, event);
+					arrow_movement(editor, event);
 				}
 			}
 			else if (event.type == SDL_WINDOWEVENT)
@@ -95,11 +160,19 @@ int main(int argc, char** argv)
 				}
 			}
 
-			window_clear(window, bg); 
-			editor_render(editor, window, font, fg, bg);
+			window_clear(window, colors_rgb->editor_bg); 
+			editor_render(editor, window, font, colors_rgb);
+
+			// capping the frame rate
+			frame_time = SDL_GetTicks() - frame_start;
+			if (frame_delay > frame_time)
+			{
+				SDL_Delay(frame_delay - frame_time);		
+			}
 		}
 	}
 
+	free_colors();
 	editor_destroy(editor);
 	window_destroy(window);
 

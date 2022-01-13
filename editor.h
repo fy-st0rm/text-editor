@@ -1,7 +1,7 @@
 #ifndef _EDITOR_H_
 #define _EDITOR_H_
 
-#include "util.h"
+#include "globals.h"
 #include "window.h"
 
 #define TAB_SIZE 	4
@@ -18,7 +18,6 @@ typedef struct
 
 	// Cursor
 	int cur_x, cur_y, cur_rend_x, cur_rend_y, cur_w, cur_h;
-	SDL_Color cur_fg;
 	
 	// Scroll
 	int scroll_x, scroll_y;
@@ -56,10 +55,10 @@ void			editor_scroll_up	(Editor* editor);
 void			editor_scroll_down	(Editor* editor);
 
 // Editor rendering
-void			editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, SDL_Color fg, SDL_Color bg);
-void 			editor_render_line	(Editor* editor, int start, int end, TTF_Font* font, SDL_Color fg, SDL_Color bg);
-void			editor_render_bar	(Editor* editor, TTF_Font* font, SDL_Color fg, SDL_Color bg);
-void			editor_render		(Editor* editor, Window* window, TTF_Font* font, SDL_Color fg, SDL_Color bg);
+void			editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Colors* color_rgb);
+void 			editor_render_line	(Editor* editor, int start, int end, TTF_Font* font, Colors* color_rgb);
+void			editor_render_bar	(Editor* editor, TTF_Font* font, Colors* color_rgb);
+void			editor_render		(Editor* editor, Window* window, TTF_Font* font, Colors* colors_rgb);
 void			editor_gen_texture	(Editor* editor, SDL_Renderer* renderer, TTF_Font* font);
 void			editor_draw_line	(Editor* editor, int x, int y, SDL_Texture* texture, SDL_Color color);
 

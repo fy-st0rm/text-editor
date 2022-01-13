@@ -1,13 +1,14 @@
 #ifndef _WINDOW_H_
 #define _WINDOW_H_
 
-#include "util.h"
+#include "globals.h"
 
 typedef struct 
 {
 	SDL_Window* 	window;
 	SDL_Renderer* 	renderer;
 	int width, height;
+	enum Modes mode;
 } Window;
 
 Window* window_new		(char* title, int w, int h);
