@@ -91,7 +91,7 @@ int main(int argc, char** argv)
 	// List of buffers
 	int curr_buffer = 0;
 	Editor* buffers[1];
-	Editor* editor = editor_new(window, font, "editor.c");
+	Editor* editor = editor_new(window, font, "");
 	buffers[0] = editor;
 
 

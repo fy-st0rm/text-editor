@@ -65,12 +65,16 @@ int editor_read_file(Editor* editor, char* file_name)
 		if (file == NULL)
 			return 2;
 
+		editor->cur_x = editor->cur_y = editor->cur_rend_x = editor->cur_rend_y = 0;
+		editor->buffer_len = 0;
+		strcpy(editor->text_buffer, "\0");
+
 		char ch;
 		while((ch = fgetc(file)) != EOF)
 			editor_insert(editor, ch);
 
-		editor->cur_x = editor->cur_y = editor->cur_rend_x = editor->cur_rend_y = 0;
 		fclose(file);
+		editor->cur_x = editor->cur_y = editor->cur_rend_x = editor->cur_rend_y = 0;
 
 		strcpy(editor->file_name, file_name);
 		return 3;
