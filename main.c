@@ -87,13 +87,19 @@ int main(int argc, char** argv)
 	Window* window = window_new("Text Editor", 800, 600);
 	Cmd_line* cmd_line = cmd_line_new(window, font);
 
+	// Reading the cmd line arguments
+	char file_name[256];
+	for (int i = 0; i < 256; i++) file_name[i] = '\0';
+	strcpy(file_name, "");
+
+	if (argc > 1)
+		strcpy(file_name, argv[1]);
 
 	// List of buffers
 	int curr_buffer = 0;
 	Editor* buffers[1];
-	Editor* editor = editor_new(window, font, "");
+	Editor* editor = editor_new(window, font, file_name); 
 	buffers[0] = editor;
-
 
 	// Flags
 	bool loop = true;
