@@ -1,11 +1,11 @@
 #include "editor.h"
 
-Editor* editor_new(Window* window, char* file_name)
+Editor* editor_new(Window* window, TTF_Font* font, char* file_name)
 {
 	Editor* editor = (Editor*) malloc(sizeof(Editor));
 	editor->window = window;
 
-	editor->file_name = file_name;
+	strcpy(editor->file_name, file_name);
 	editor->text_buffer = calloc(1, sizeof(char));
 	editor->buffer_len= 0;
 
@@ -25,6 +25,9 @@ Editor* editor_new(Window* window, char* file_name)
 	// Scroll
 	editor->scroll_x = 0;
 	editor->scroll_y = 0;
+
+	editor_gen_texture(editor, window->renderer, font);
+	editor_read_file(editor, editor->file_name);
 
 	return editor;
 }
@@ -52,20 +55,46 @@ void editor_resize(Editor* editor)
 }
 
 // Editor file handling
-void editor_read_file(Editor* editor)
+int editor_read_file(Editor* editor, char* file_name)
 {
-	FILE* file;
-	file = fopen(editor->file_name, "r");
+	if (strlen(file_name) > 0)
+	{
+		FILE* file;
+		file = fopen(file_name, "r");
 
-	if (file == NULL)
-		return;
+		if (file == NULL)
+			return 2;
 
-	char ch;
-	while((ch = fgetc(file)) != EOF)
-		editor_insert(editor, ch);
+		char ch;
+		while((ch = fgetc(file)) != EOF)
+			editor_insert(editor, ch);
 
-	editor->cur_x = editor->cur_y = editor->cur_rend_x = editor->cur_rend_y = 0;
-	fclose(file);
+		editor->cur_x = editor->cur_y = editor->cur_rend_x = editor->cur_rend_y = 0;
+		fclose(file);
+
+		strcpy(editor->file_name, file_name);
+		return 3;
+	}
+	return 1;
+}
+
+int editor_write_file(Editor* editor, char* file_name)
+{
+	if (strlen(file_name) > 0)
+	{
+		FILE* file;
+		file = fopen(file_name, "w");
+
+		if (file == NULL)
+			return 2;
+
+		fprintf(file, "%s", editor->text_buffer);
+		fclose(file);
+
+		strcpy(editor->file_name, file_name);
+		return 0;
+	}
+	return 1; 
 }
 
 // Editor buffer management
@@ -139,7 +168,7 @@ void editor_get_line(Editor* editor, int line_no, char* out)
 		{	
 			lines++;
 			if (lines == line_no)
-			{
+			{	
 				if (editor->buffer_len == end + 1) end++;
 				int size = end - start;
 				memcpy(out, editor->text_buffer+start, size);
@@ -156,6 +185,10 @@ void editor_get_line(Editor* editor, int line_no, char* out)
 		{
 			end++;
 		}
+	}
+	if (end == 0)
+	{
+		strcpy(out, "\0");
 	}
 }
 
@@ -231,8 +264,18 @@ void editor_backspace(Editor* editor)
 			{
 				len = strlen(line);
 			}
-			editor->cur_x = len;
-			editor->cur_rend_x = len;
+
+			int total_line = editor_get_line_no(editor);
+			if (editor->cur_y + 1 == total_line - 1)
+			{
+				editor->cur_rend_x = len - 1;
+				editor->cur_x = len - 1;
+			}
+			else
+			{
+				editor->cur_rend_x = len;
+				editor->cur_x = len;
+			}
 
 			// Counting tabs
 			for (int i = 0; i < len; i++)
@@ -243,7 +286,8 @@ void editor_backspace(Editor* editor)
 
 		// overiting the memory in that position with the memory infront of that position
 		memmove(&editor->text_buffer[pos], &editor->text_buffer[pos+1], editor->buffer_len - pos);
-		editor->buffer_len--;
+		if (editor->buffer_len > 0)
+			editor->buffer_len--;
 	}
 }
 
@@ -266,6 +310,7 @@ void editor_cur_right(Editor* editor)
 {
 	int size = editor_line_len(editor, editor->cur_y + 1);
 	char line[size];
+	for (int i = 0; i < size; i++) line[i] = '\0';
 	editor_get_line(editor, editor->cur_y + 1, line);
 
 	int len = 0;
@@ -436,9 +481,9 @@ void editor_scroll_down(Editor* editor)
 {
 	int h;
 	SDL_QueryTexture(editor->editor_texture, NULL, NULL, NULL, &h);
-	if (editor->cur_y - editor->scroll_y > (h - (2 * editor->cur_h))  / editor->cur_h)
+	if (editor->cur_y - editor->scroll_y > (h - (3 * editor->cur_h))  / editor->cur_h)
 	{
-		int diff = ((h - (2 * editor->cur_h)) / editor->cur_h) - (editor->cur_y - editor->scroll_y);
+		int diff = ((h - (3 * editor->cur_h)) / editor->cur_h) - (editor->cur_y - editor->scroll_y);
 		editor->scroll_y -= diff;
 	}
 }
@@ -451,48 +496,52 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 	SDL_SetRenderDrawColor(editor->window->renderer, colors_rgb->editor_bg.r, colors_rgb->editor_bg.g, colors_rgb->editor_bg.b, colors_rgb->editor_bg.a);
 	SDL_RenderClear(editor->window->renderer);
 
+
 	// Flushing the buffer into the render target
-	for (int y = 0, i = start; i < end; y++, i++)
+	if (editor->buffer_len > 0)
 	{
-		int size = editor_line_len(editor, i);
-		char line[size];
-		editor_get_line(editor, i, line);
-
-		if (size > 0)
+		for (int y = 0, i = start; i < end; y++, i++)
 		{
-			// Adding 4 bytes for the each tabs
-			int buff_size = size;
-			for (int i = 0; i < size; i++)
+			int size = editor_line_len(editor, i);
+			char line[size];
+			editor_get_line(editor, i, line);
+
+			if (size > 0)
 			{
-				if (line[i] == '\t') buff_size += TAB_SIZE - 1;
+				// Adding 4 bytes for the each tabs
+				int buff_size = size;
+				for (int i = 0; i < size; i++)
+				{
+					if (line[i] == '\t') buff_size += TAB_SIZE - 1;
+				}
+
+				char text[buff_size + 1];
+
+				for (int k = 0, j = 0; j < size; j++)
+				{
+					char ch = line[j];
+					if (ch == '\t')
+					{
+						for (int i = 0; i < TAB_SIZE; i++) text[k+i] = ' ';
+						k += TAB_SIZE;
+					}
+					else if (ch != '\n')
+					{
+						text[k] = line[j];
+						k++;
+					}
+					else if (ch == '\n')
+					{
+						text[k] = ' ';
+						k++;
+					}
+				}
+				text[buff_size] = '\0';
+
+				SDL_Texture* texture = create_texture(editor->window->renderer, font, text); 
+				editor_draw_line(editor, -editor->scroll_x, y, texture, colors_rgb->editor_fg);
+				SDL_DestroyTexture(texture);	
 			}
-
-			char text[buff_size + 1];
-
-			for (int k = 0, j = 0; j < size; j++)
-			{
-				char ch = line[j];
-				if (ch == '\t')
-				{
-					for (int i = 0; i < TAB_SIZE; i++) text[k+i] = ' ';
-					k += TAB_SIZE;
-				}
-				else if (ch != '\n')
-				{
-					text[k] = line[j];
-					k++;
-				}
-				else if (ch == '\n')
-				{
-					text[k] = ' ';
-					k++;
-				}
-			}
-			text[buff_size] = '\0';
-
-			SDL_Texture* texture = create_texture(editor->window->renderer, font, text); 
-			editor_draw_line(editor, -editor->scroll_x, y, texture, colors_rgb->editor_fg);
-			SDL_DestroyTexture(texture);	
 		}
 	}
 
@@ -500,6 +549,21 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 	SDL_Rect cur_rect = { (editor->cur_rend_x - editor->scroll_x) * editor->cur_w,  (editor->cur_rend_y - editor->scroll_y) * editor->cur_h , editor->cur_w, editor->cur_h };
 	SDL_SetRenderDrawColor(editor->window->renderer, colors_rgb->cursor.r, colors_rgb->cursor.g, colors_rgb->cursor.b, colors_rgb->cursor.a);
 	SDL_RenderFillRect(editor->window->renderer, &cur_rect); 
+
+	// Rendering the highlighted character
+	if (editor->buffer_len > 0)
+	{
+		int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+		char ch = editor->text_buffer[pos];
+		if (ch != '\n' && ch != '\t' && ch)
+		{
+			char c[1];
+			sprintf(c, "%c", ch);
+			SDL_Texture* texture = create_texture(editor->window->renderer, font, c);
+			draw_text(editor->window->renderer, editor->cur_rend_x - editor->scroll_x, editor->cur_rend_y - editor->scroll_y, texture, colors_rgb->editor_bg);
+			SDL_DestroyTexture(texture);
+		}
+	}
 }
 
 void editor_render_line(Editor* editor, int start, int end, TTF_Font* font, Colors* colors_rgb)
@@ -514,6 +578,8 @@ void editor_render_line(Editor* editor, int start, int end, TTF_Font* font, Colo
 		char c[end-start + 1];
 		sprintf(c, "%d\0", i);
 		SDL_Texture* texture = sdl_check_ptr(create_texture(editor->window->renderer, font, c));
+
+		// Changing color if the line has the cursor
 		if (i - 1 == editor->cur_rend_y)
 			draw_text(editor->window->renderer, 0, i - 1 - editor->scroll_y, texture, colors_rgb->sel_line_fg);
 		else
@@ -558,11 +624,14 @@ void editor_render_bar(Editor* editor, TTF_Font* font, Colors* colors_rgb)
    	SDL_DestroyTexture(char_texture);	
 
 	// Rendering file name
-	SDL_Texture* file_name = create_texture(editor->window->renderer, font, editor->file_name);
-	SDL_QueryTexture(file_name, NULL, NULL, &w, &h);
-	SDL_Rect pos_1 = { 4 * editor->cur_w, 0, w, h };
-	SDL_RenderCopy(editor->window->renderer, file_name, NULL, &pos_1);
-	SDL_DestroyTexture(file_name);
+	if (strlen(editor->file_name) > 0)
+	{
+		SDL_Texture* file_name = create_texture(editor->window->renderer, font, editor->file_name);
+		SDL_QueryTexture(file_name, NULL, NULL, &w, &h);
+		SDL_Rect pos_1 = { 4 * editor->cur_w, 0, w, h };
+		SDL_RenderCopy(editor->window->renderer, file_name, NULL, &pos_1);
+		SDL_DestroyTexture(file_name);
+	}
 
 	// Rendering the cursor position
 	char cur_pos[5+1+5] = {0};
@@ -586,8 +655,8 @@ void editor_render(Editor* editor, Window* window, TTF_Font* font, Colors* color
 	// Calculating the visible lines
 	int total_line = editor_get_line_no(editor);
 	int start = editor->scroll_y + 1;
-	int end = editor->window->height / editor->cur_h + editor->scroll_y;
-	if (end > total_line) end = total_line;
+	int end = editor->window->height / editor->cur_h + editor->scroll_y - 1;
+	if (end > total_line) end = total_line + 1;
 
 	// Rendering buffers
 	editor_render_line(editor, start, end, font, colors_rgb);
@@ -634,24 +703,3 @@ void editor_draw_line(Editor* editor, int x, int y, SDL_Texture* texture, SDL_Co
 	SDL_RenderCopy(editor->window->renderer, texture, NULL, &rect);
 }
 
-SDL_Texture* create_texture(SDL_Renderer* renderer, TTF_Font* font, char* text)
-{
-	SDL_Color white = {255, 255, 255, 255};
-	SDL_Surface* surface = sdl_check_ptr(TTF_RenderUTF8_Blended(font, text, white));
-	SDL_Texture* texture = sdl_check_ptr(SDL_CreateTextureFromSurface(renderer, surface));
-
-	SDL_FreeSurface(surface);
-	return texture;
-}
-
-void draw_text(SDL_Renderer* renderer, int x, int y, SDL_Texture* texture, SDL_Color color)
-{
-	SDL_Rect rect;
-	SDL_QueryTexture(texture, NULL, NULL, &rect.w, &rect.h);
-
-	rect.x = x * rect.w;
-	rect.y = y * rect.h;
-
-	SDL_SetTextureColorMod(texture, color.r, color.g, color.b);
-	SDL_RenderCopy(renderer, texture, NULL, &rect);
-}

@@ -5,13 +5,10 @@
 #include "window.h"
 
 #define TAB_SIZE 	4
-#define MAX_TEXTURE 95
-#define CHAR_START  32
-#define CHAR_END	127
 
 typedef struct
 {
-	char* file_name;
+	char file_name[256];
 	char* text_buffer;
 	int buffer_len;
 	Window* window;
@@ -27,12 +24,13 @@ typedef struct
 	SDL_Texture* bar_texture;
 } Editor;
 
-Editor* 		editor_new			(Window* window, char* file_name);
+Editor* 		editor_new			(Window* window, TTF_Font* font, char* file_name);
 void			editor_destroy		(Editor* editor);
 void 			editor_resize		(Editor* editor);
 
 // Editor file handling
-void			editor_read_file	(Editor* editor);
+int				editor_read_file	(Editor* editor, char* file_name);
+int				editor_write_file	(Editor* editor, char* file_name);
 
 // Editor buffer management
 int				editor_get_cur_pos	(Editor* editor, int x, int y);
@@ -61,9 +59,5 @@ void			editor_render_bar	(Editor* editor, TTF_Font* font, Colors* color_rgb);
 void			editor_render		(Editor* editor, Window* window, TTF_Font* font, Colors* colors_rgb);
 void			editor_gen_texture	(Editor* editor, SDL_Renderer* renderer, TTF_Font* font);
 void			editor_draw_line	(Editor* editor, int x, int y, SDL_Texture* texture, SDL_Color color);
-
-// Render helper function
-SDL_Texture* 	create_texture		(SDL_Renderer* renderer, TTF_Font* font, char* text);
-void			draw_text			(SDL_Renderer* renderer, int x, int y, SDL_Texture* texture, SDL_Color color);
 
 #endif

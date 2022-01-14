@@ -1,8 +1,10 @@
 #include "globals.h"
 #include "editor.h"
 #include "window.h"
+#include "cmd_line.h"
 
 /*
+ * TODO: [ ] Command line
  * TODO: [ ] Vim like modes (NORMAL, INSERT, COMMAND, VISUAL)
  * TODO: [ ] Colors
  * TODO: [ ] Fix the memory leak while resizing the window
@@ -83,33 +85,53 @@ int main(int argc, char** argv)
 	TTF_Font* font = sdl_check_ptr(TTF_OpenFont(font_path, font_size));
 
 	Window* window = window_new("Text Editor", 800, 600);
-	char* file_name = "editor.c";
-	Editor* editor = editor_new(window, file_name);
+	Cmd_line* cmd_line = cmd_line_new(window, font);
 
-	editor_gen_texture(editor, window->renderer, font);
-	editor_read_file(editor);
 
+	// List of buffers
+	int curr_buffer = 0;
+	Editor* buffers[1];
+	Editor* editor = editor_new(window, font, "editor.c");
+	buffers[0] = editor;
+
+
+	// Flags
 	bool loop = true;
+	bool halt = false;
 	SDL_Event event;
-
-	// Frame stuff
-	int fps = 75;
-	int frame_delay = 1000 / fps;
-	Uint32 frame_start;
-	int frame_time;
 
 	while (loop)
 	{
 		if (SDL_WaitEvent(&event))
 		{
-			frame_start = SDL_GetTicks();
-
 			if (event.type == SDL_QUIT)
 				loop = false;
-			else if (event.type == SDL_TEXTINPUT && window->mode == INSERT)
+			else if (event.type == SDL_TEXTINPUT)
 			{
-				char* text = event.text.text;
-				editor_insert(editor, text[0]);
+				if (window->mode == INSERT)
+				{
+					if (!halt)
+					{
+						char* text = event.text.text;
+						editor_insert(buffers[curr_buffer], text[0]);
+					}
+					else
+					{
+						halt = false;
+					}
+				}
+				else if (window->mode == COMMAND)
+				{
+					if (!halt)
+					{
+						char* text = event.text.text;
+						cmd_line_insert(cmd_line, text[0]);
+					}
+					else
+					{
+						halt = false;
+					}
+				}
 			}
 			else if (event.type == SDL_KEYDOWN)
 			{
@@ -119,13 +141,13 @@ int main(int argc, char** argv)
 					switch (event.key.keysym.sym)
 					{
 						case SDLK_RETURN:
-							editor_insert(editor, '\n');
+							editor_insert(buffers[curr_buffer], '\n');
 							break;
 						case SDLK_TAB:
-							editor_insert(editor, '\t');
+							editor_insert(buffers[curr_buffer], '\t');
 							break;
 						case SDLK_BACKSPACE:
-							editor_backspace(editor);
+							editor_backspace(buffers[curr_buffer]);
 							break;
 
 						// Mode switcher
@@ -133,7 +155,7 @@ int main(int argc, char** argv)
 							window->mode = NORMAL;
 							break;
 					}
-					arrow_movement(editor, event);
+					arrow_movement(buffers[curr_buffer], event);
 				}
 				// NORMAL MODE SPECIFIC
 				else if (window->mode == NORMAL)
@@ -143,10 +165,50 @@ int main(int argc, char** argv)
 						// Mode switcher
 						case SDLK_i:
 							window->mode = INSERT;
+							halt = true;
+							break;
+						
+						case SDLK_SEMICOLON:
+							window->mode = COMMAND;
+							cmd_line_set_prompt(cmd_line, ":");
+							cmd_line_clear_input(cmd_line);
+							halt = true;
 							break;
 					}
-					hjkl_movement(editor, event);
-					arrow_movement(editor, event);
+					hjkl_movement(buffers[curr_buffer], event);
+					arrow_movement(buffers[curr_buffer], event);
+				}
+				// COMMAND MODE SPECIFIC
+				else if (window->mode == COMMAND)
+				{
+					switch (event.key.keysym.sym)
+					{
+						case SDLK_RETURN:
+							cmd_line_parse(cmd_line, buffers, &curr_buffer);
+							cmd_line_clear_prompt(cmd_line);
+							window->mode = NORMAL;
+							break;
+
+						case SDLK_BACKSPACE:
+							cmd_line_backspace(cmd_line);
+							break;
+
+						// Command line movement
+						case SDLK_LEFT:
+							cmd_line_cur_left(cmd_line);
+							break;
+						case SDLK_RIGHT:
+							cmd_line_cur_right(cmd_line);
+							break;
+
+
+						// Mode switcher
+						case SDLK_ESCAPE:
+							window->mode = NORMAL;
+							cmd_line_clear_prompt(cmd_line);
+							cmd_line_clear_input(cmd_line);
+							break;
+					}
 				}
 			}
 			else if (event.type == SDL_WINDOWEVENT)
@@ -155,25 +217,31 @@ int main(int argc, char** argv)
 				{
 					case SDL_WINDOWEVENT_RESIZED:
 						SDL_GetWindowSize(window->window, &window->width, &window->height);
-						editor_resize(editor);
+						for (int i = 0; i < sizeof(buffers) / sizeof(buffers[0]); i++)
+							editor_resize(buffers[i]);
+						cmd_line_resize(cmd_line);
 						break;
 				}
 			}
 
-			window_clear(window, colors_rgb->editor_bg); 
-			editor_render(editor, window, font, colors_rgb);
-
-			// capping the frame rate
-			frame_time = SDL_GetTicks() - frame_start;
-			if (frame_delay > frame_time)
+			if (curr_buffer < 0)
 			{
-				SDL_Delay(frame_delay - frame_time);		
+				loop = false;
+			}
+			else
+			{
+				window_clear(window, colors_rgb->editor_bg); 
+				
+				for (int i = 0; i < sizeof(buffers) / sizeof(buffers[0]); i++)
+					editor_render(editor, window, font, colors_rgb);
+
+				cmd_line_render(cmd_line, font, colors_rgb);
 			}
 		}
 	}
 
 	free_colors();
-	editor_destroy(editor);
+	cmd_line_destroy(cmd_line);
 	window_destroy(window);
 
 	return 0;
