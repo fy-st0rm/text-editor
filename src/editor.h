@@ -5,6 +5,7 @@
 #include "window.h"
 
 #define TAB_SIZE 	4
+#define JUMP_SIZE	10
 
 typedef struct
 {
@@ -38,12 +39,23 @@ int				editor_write_file	(Editor* editor, char* file_name);
 // Editor buffer management
 int				editor_get_cur_pos	(Editor* editor, int x, int y);
 void			editor_set_cur_pos	(Editor* editor, int pos);
+void			editor_set_cur_back (Editor* editor);
+void			editor_set_cur_front(Editor* editor);
 int				editor_get_line_no	(Editor* editor);
 void			editor_get_line		(Editor* editor, int line_no, char* out);
 int				editor_line_len		(Editor* editor, int line_no);
+
+// Insert
 void			editor_insert		(Editor* editor, char chr);
+void			editor_insert_nl_bel(Editor* editor);
+void			editor_insert_nl_abv(Editor* editor);
+
+// Delete
 void			editor_backspace	(Editor* editor);
 void			editor_delete		(Editor* editor);
+void			editor_delete_line	(Editor* editor);
+void			editor_delete_left	(Editor* editor);
+void			editor_delete_right	(Editor* editor);
 
 // Editor cursor
 void			editor_cur_left		(Editor* editor);
@@ -52,6 +64,8 @@ void			editor_cur_up		(Editor* editor);
 void			editor_cur_down		(Editor* editor);
 void			editor_jump_left	(Editor* editor);
 void			editor_jump_right	(Editor* editor);
+void			editor_jump_up		(Editor* editor);
+void			editor_jump_down	(Editor* editor);
 
 // Editor scrolls
 void			editor_scroll_left	(Editor* editor);

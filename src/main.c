@@ -4,11 +4,12 @@
 #include "cmd_line.h"
 
 /*
- * TODO: [ ] Vim like modes (NORMAL, INSERT, COMMAND, VISUAL)
+ * TODO: [ ] Vim like modes ([X]NORMAL, [X]INSERT, [X]COMMAND, [ ]VISUAL)
  * TODO: [ ] Colors
  * TODO: [ ] Fix the memory leak while resizing the window
  * TODO: [ ] Clipboard handling
  * TODO: [ ] Text selection
+ * TODO: [ ] Config
  * TODO: [X] Command line
  * TODO: [X] Read and write to the file
  * TODO: [X] Proper cursor movement
@@ -24,7 +25,24 @@
  * TODO: [X] Fix a bug while inserting between the line
  */
 
-void arrow_movement(Editor* editor, SDL_Event event)
+// Keys for key bindings
+typedef struct 
+{
+	bool ctrl;
+	bool shift;
+	bool d;
+} Keys;
+
+Keys* init_keys()
+{
+	Keys* keys = calloc(1, sizeof(Keys));
+
+	keys->ctrl = false;
+	keys->shift = false;
+	keys->d = false;
+}
+
+void arrow_movement(Editor* editor, SDL_Event event, Keys* keys)
 {
 	switch (event.key.keysym.sym)
 	{
@@ -38,16 +56,22 @@ void arrow_movement(Editor* editor, SDL_Event event)
 			break;
 
 		case SDLK_UP:
-			editor_cur_up(editor);
+			if (keys->ctrl)
+				editor_jump_up(editor);
+			else
+				editor_cur_up(editor);
 			break;
 
 		case SDLK_DOWN:
-			editor_cur_down(editor);
+			if (keys->ctrl)
+				editor_jump_down(editor);
+			else
+				editor_cur_down(editor);
 			break;
 	}
 }
 
-void hjkl_movement(Editor* editor, SDL_Event event)
+void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys)
 {
 	switch (event.key.keysym.sym)
 	{
@@ -67,6 +91,45 @@ void hjkl_movement(Editor* editor, SDL_Event event)
 		case SDLK_j:
 			editor_cur_down(editor);
 			break;
+
+		case SDLK_w:
+			if (!keys->d)
+				editor_jump_right(editor);
+			else if (keys->d)
+			{
+				editor_delete_right(editor);
+				keys->d = false;
+			}
+			break;
+		
+		case SDLK_b:
+			if (!keys->d)
+				editor_jump_left(editor);
+			else if (keys->d)
+			{
+				editor_delete_left(editor);
+				keys->d = false;
+			}
+			break;
+
+		case SDLK_u:
+			if (keys->ctrl)
+				editor_jump_up(editor);
+			break;
+
+		case SDLK_d:
+			if (keys->ctrl)
+				editor_jump_down(editor);
+			else if (keys->d)
+			{
+				editor_delete_line(editor);
+				keys->d = false;
+			}
+			else if (!keys->d)
+			{
+				keys->d = true;
+			}
+			break;
 	}
 }
 
@@ -84,6 +147,7 @@ int main(int argc, char** argv)
 	int font_size = 16;
 	TTF_Font* font = sdl_check_ptr(TTF_OpenFont(font_path, font_size));
 
+	// Creating window and cmd line
 	Window* window = window_new("Text Editor", 800, 600);
 	Cmd_line* cmd_line = cmd_line_new(window, font);
 
@@ -94,6 +158,9 @@ int main(int argc, char** argv)
 
 	if (argc > 1)
 		strcpy(file_name, argv[1]);
+	
+	// Keys for keybindings
+	Keys* keys = init_keys();
 
 	// List of buffers
 	int curr_buffer = 0;
@@ -101,8 +168,6 @@ int main(int argc, char** argv)
 	Editor** buffers = calloc(buffer_amt, sizeof(Editor));
 	Editor* editor = editor_new(window, font, file_name, true); 
 	buffers[0] = editor;
-
-	editor_set_cur_pos(editor, 109);
 
 	// Flags
 	bool loop = true;
@@ -167,13 +232,14 @@ int main(int argc, char** argv)
 							window->mode = NORMAL;
 							break;
 					}
-					arrow_movement(buffers[curr_buffer], event);
+					arrow_movement(buffers[curr_buffer], event, keys);
 				}
 				// NORMAL MODE SPECIFIC
 				else if (window->mode == NORMAL)
 				{
 					switch (event.key.keysym.sym)
 					{
+						// Delete 
 						case SDLK_DELETE:
 						case SDLK_x:
 							if (buffers[curr_buffer]->modifiable)
@@ -189,6 +255,7 @@ int main(int argc, char** argv)
 							}
 							break;
 
+						// Delete and change mode to insert
 						case SDLK_s:
 							if (buffers[curr_buffer]->modifiable)
 							{
@@ -206,19 +273,57 @@ int main(int argc, char** argv)
 								}
 							}
 							break;
-						
-						case SDLK_w:
-							editor_jump_right(buffers[curr_buffer]);
+
+						// Add new line above or below a line
+						case SDLK_o:
+							if (buffers[curr_buffer]->modifiable)
+							{
+								if (keys->shift)
+									editor_insert_nl_abv(buffers[curr_buffer]);
+								else
+									editor_insert_nl_bel(buffers[curr_buffer]);
+								window->mode = INSERT;
+								halt = true;
+							}
+							else
+							{
+								cmd_line_clear_input(cmd_line);
+								char* reply = replies[5];
+								for (int i = 0; i < strlen(reply); i++)
+								{
+									cmd_line_insert(cmd_line, reply[i]);
+								}
+							}
 							break;
-						
-						case SDLK_b:
-							editor_jump_left(buffers[curr_buffer]);
+
+						// To jump to last character
+						case SDLK_a:
+							if (buffers[curr_buffer]->modifiable)
+							{
+								if (keys->shift)
+								{
+									editor_set_cur_back(buffers[curr_buffer]);
+									window->mode = INSERT;
+									halt = true;
+								}
+							}
+							else
+							{
+								cmd_line_clear_input(cmd_line);
+								char* reply = replies[5];
+								for (int i = 0; i < strlen(reply); i++)
+								{
+									cmd_line_insert(cmd_line, reply[i]);
+								}
+							}
 							break;
 
 						// Mode switcher
 						case SDLK_i:
 							if (buffers[curr_buffer]->modifiable)
 							{
+								if (keys->shift)
+									editor_set_cur_front(buffers[curr_buffer]);
 								window->mode = INSERT;
 								halt = true;
 							}
@@ -234,14 +339,17 @@ int main(int argc, char** argv)
 							break;
 						
 						case SDLK_SEMICOLON:
-							window->mode = COMMAND;
-							cmd_line_set_prompt(cmd_line, ":");
-							cmd_line_clear_input(cmd_line);
-							halt = true;
+							if (keys->shift)
+							{
+								window->mode = COMMAND;
+								cmd_line_set_prompt(cmd_line, ":");
+								cmd_line_clear_input(cmd_line);
+								halt = true;
+							}
 							break;
 					}
-					hjkl_movement(buffers[curr_buffer], event);
-					arrow_movement(buffers[curr_buffer], event);
+					hjkl_movement(buffers[curr_buffer], event, keys);
+					arrow_movement(buffers[curr_buffer], event, keys);
 				}
 				// COMMAND MODE SPECIFIC
 				else if (window->mode == COMMAND)
@@ -274,6 +382,36 @@ int main(int argc, char** argv)
 							break;
 					}
 				}
+
+				// For key bindings
+				switch (event.key.keysym.sym)
+				{
+					case SDLK_LCTRL:
+					case SDLK_RCTRL:
+						keys->ctrl = true;
+						break;
+
+					case SDLK_LSHIFT:
+					case SDLK_RSHIFT:
+						keys->shift = true;
+						break;
+				}
+			}
+			else if (event.type == SDL_KEYUP)
+			{
+				// For key bindings
+				switch (event.key.keysym.sym)
+				{
+					case SDLK_LCTRL:
+					case SDLK_RCTRL:
+						keys->ctrl = false;
+						break;
+
+					case SDLK_LSHIFT:
+					case SDLK_RSHIFT:
+						keys->shift = false;
+						break;
+				}
 			}
 			else if (event.type == SDL_WINDOWEVENT)
 			{
@@ -304,6 +442,7 @@ int main(int argc, char** argv)
 		}
 	}
 
+	free(keys);
 	free(buffers);
 
 	free_colors();

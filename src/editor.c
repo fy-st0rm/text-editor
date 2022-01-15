@@ -161,6 +161,38 @@ void editor_set_cur_pos(Editor* editor, int pos)
 	}
 }
 
+void editor_set_cur_back(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+	for (int i = pos; i < editor->buffer_len; i++)
+	{
+		char ch = editor->text_buffer[i];
+		if (ch == '\n')
+		{
+			editor_set_cur_pos(editor, i);
+			break;
+		}
+	}
+}
+
+void editor_set_cur_front(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+	for (int i = pos - 1; i >= 0; i--) 
+	{
+		char ch = editor->text_buffer[i];
+		if (ch == '\n')
+		{
+			editor_set_cur_pos(editor, i + 1);
+			break;
+		}
+		else if (i == 0)
+		{
+			editor_set_cur_pos(editor, i);
+		}
+	}
+}
+
 int editor_get_line_no(Editor* editor)
 {
 	int line_no = 1;
@@ -233,6 +265,7 @@ void editor_get_line(Editor* editor, int line_no, char* out)
 	}
 }
 
+// Insert functions
 void editor_insert(Editor* editor, char chr)
 {
 	char* new_buffer = calloc(editor->buffer_len + 1, sizeof(char));
@@ -279,6 +312,37 @@ void editor_insert(Editor* editor, char chr)
 	editor->edited = true;
 }
 
+void editor_insert_nl_bel(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+	for (int i = pos; i < editor->buffer_len; i++)
+	{
+		char ch = editor->text_buffer[i];
+		if (ch == '\n')
+		{
+			editor_set_cur_pos(editor, i);
+			editor_insert(editor, '\n');
+			break;
+		}
+	}
+}
+
+void editor_insert_nl_abv(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+	for (int i = pos; i >= 0; i--) 
+	{
+		char ch = editor->text_buffer[i];
+		if (ch == '\n')
+		{
+			editor_set_cur_pos(editor, i);
+			editor_insert(editor, '\n');
+			break;
+		}
+	}
+}
+
+// Delete functions
 void editor_backspace(Editor* editor)
 {
 	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y) - 1;
@@ -331,6 +395,7 @@ void editor_backspace(Editor* editor)
 		memmove(&editor->text_buffer[pos], &editor->text_buffer[pos+1], editor->buffer_len - pos);
 		if (editor->buffer_len > 0)
 			editor->buffer_len--;
+		editor->edited = true;
 	}
 }
 
@@ -346,6 +411,98 @@ void editor_delete(Editor* editor)
 	}
 }
 
+void editor_delete_line(Editor* editor)
+{
+	int start = 0, end = 0, lines = 0;
+	for (int i = 0; i < editor->buffer_len; i++)
+	{
+		if ((editor->text_buffer[i] == '\n') || (i + 1 == editor->buffer_len))
+		{	
+			lines++;
+			if (lines == editor->cur_y + 1)
+			{	
+				end++;
+				if (editor->buffer_len == end + 1) end++;
+				int size = end - start;
+
+				// Deleting the line
+				char* new_buffer = calloc(editor->buffer_len, sizeof(char));
+				memcpy(new_buffer, editor->text_buffer, start);
+				strcpy(new_buffer + start, editor->text_buffer + end);
+				free(editor->text_buffer);
+				editor->text_buffer = new_buffer;
+
+				editor->edited = true;
+				editor->cur_x = editor->cur_rend_x = 0;
+				editor->buffer_len -= size;
+
+				break;
+			}
+			else
+			{
+				end++;
+				start = end;
+			}
+		}
+		else
+		{
+			end++;
+		}
+	}
+}
+
+void editor_delete_left(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y) - 1;
+	for (int i = pos; i >= 0; i--) 
+	{
+		char ch = editor->text_buffer[i];
+		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n";
+		if (strchr(characters, ch) != NULL)
+		{
+			int size = pos - i;
+
+			// Deleting the line
+			char* new_buffer = calloc(editor->buffer_len, sizeof(char));
+			memcpy(new_buffer, editor->text_buffer, i);
+			strcpy(new_buffer + i, editor->text_buffer + pos + 1);
+			free(editor->text_buffer);
+			editor->text_buffer = new_buffer;
+
+			editor->buffer_len -= size;
+
+			editor_set_cur_pos(editor, i);
+
+			break;
+		}
+	}
+}
+
+void editor_delete_right(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y) + 1;
+	for (int i = pos; i < editor->buffer_len; i++)
+	{
+		char ch = editor->text_buffer[i];
+		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n";
+		if (strchr(characters, ch) != NULL)
+		{
+			int size = i - pos;
+
+			// Deleting the line
+			char* new_buffer = calloc(editor->buffer_len, sizeof(char));
+			memcpy(new_buffer, editor->text_buffer, pos);
+			strcpy(new_buffer + pos - 1, editor->text_buffer + i);
+			free(editor->text_buffer);
+			editor->text_buffer = new_buffer;
+
+			editor->buffer_len -= size;
+
+			break;
+		}
+	}
+}
+
 // Editor cursor
 void editor_cur_left(Editor* editor)
 {
@@ -358,6 +515,7 @@ void editor_cur_left(Editor* editor)
 		// Jumping when there is tab
 		if (editor->text_buffer[pos] == '\t')
 			editor->cur_rend_x -= TAB_SIZE - 1;
+		editor->edited = true;
 	}
 }
 
@@ -509,10 +667,10 @@ void editor_cur_down(Editor* editor)
 void editor_jump_left(Editor* editor)
 {
 	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y) - 1;
-	for (int i = pos; i > 0; i--) 
+	for (int i = pos; i >= 0; i--) 
 	{
 		char ch = editor->text_buffer[i];
-		char characters[] = " (){}[]=+-_,./\\:;";
+		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n";
 		if (strchr(characters, ch) != NULL)
 		{
 			editor_set_cur_pos(editor, i);
@@ -527,13 +685,132 @@ void editor_jump_right(Editor* editor)
 	for (int i = pos; i < editor->buffer_len; i++)
 	{
 		char ch = editor->text_buffer[i];
-		char characters[] = " (){}[]=+-_,./\\:;";
+		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n";
 		if (strchr(characters, ch) != NULL)
 		{
 			editor_set_cur_pos(editor, i);
 			break;
 		}
 	}
+}
+
+void editor_jump_up(Editor* editor)
+{
+	if (editor->cur_y - JUMP_SIZE + 1 > 0)
+	{
+		int size = editor_line_len(editor, editor->cur_y - JUMP_SIZE + 1);
+		char line[size];
+		editor_get_line(editor, editor->cur_y - JUMP_SIZE + 1, line);
+		
+		int len = 0;
+		int len_2 = 0;
+
+		if (line) 
+		{
+			len = strlen(line);
+			for (int i = 0; i < len; i++)
+			{
+				if (line[i] == '\t')
+					len_2 += TAB_SIZE;
+				else
+					len_2++;
+			}
+		}
+
+		// Moving the cursor
+		if (len < editor->cur_x)
+		{
+			editor->cur_x = len;
+		}
+		if (len_2 < editor->cur_rend_x)
+		{
+			editor->cur_rend_x = len_2;
+		}
+
+ 		editor->cur_y -= JUMP_SIZE;
+ 		editor->cur_rend_y -= JUMP_SIZE;
+
+		int pos = 0;
+		for (int i = 0; i < len; i++)
+		{
+			if (line[i] != '\t')
+				break;
+			pos += TAB_SIZE;
+		}
+
+		if (0 <= editor->cur_rend_x && editor->cur_rend_x < pos)
+		{
+			editor->cur_rend_x += pos - editor->cur_rend_x;
+			editor->cur_x = 0;
+			editor->cur_x += pos / TAB_SIZE;
+		}
+		else if (editor->cur_rend_x != 0)
+		{
+			editor->cur_x = (pos / TAB_SIZE) + (editor->cur_rend_x - pos);
+		}
+	}
+}
+
+void editor_jump_down(Editor* editor)
+{
+	int line_no = editor_get_line_no(editor);
+	if (editor->cur_y + JUMP_SIZE < line_no)
+	{
+		int size = editor_line_len(editor, editor->cur_y + 1 + JUMP_SIZE);
+		char line[size];
+		editor_get_line(editor, editor->cur_y + 1 + JUMP_SIZE, line);
+
+		int len = 0;
+		int len_2 = 0;
+		
+		if (line) 
+		{
+			len = strlen(line);
+			for (int i = 0; i < len; i++)
+			{
+				if (line[i] == '\t')
+					len_2 += TAB_SIZE;
+				else
+					len_2++;
+			}
+		}
+
+		// Changing X axis
+		if (len < editor->cur_x)
+		{
+			editor->cur_x = len;
+		}
+		if (len_2 < editor->cur_rend_x)
+		{
+			editor->cur_rend_x = len_2;
+		}
+
+		// Changing Y axis
+		editor->cur_y += JUMP_SIZE;
+		editor->cur_rend_y += JUMP_SIZE;
+
+		// Calculating the tab size in the begining of the line
+		int pos = 0;
+		for (int i = 0; i < len; i++)
+		{
+			if (line[i] != '\t')
+				break;
+			pos += TAB_SIZE;
+		}
+
+		// Jumping if there is a tab
+		if (0 <= editor->cur_rend_x && editor->cur_rend_x < pos)
+		{
+			editor->cur_rend_x += pos - editor->cur_rend_x;
+			editor->cur_x = 0;
+			editor->cur_x += pos / TAB_SIZE;
+		}
+		else if (editor->cur_rend_x != 0)
+		{
+			editor->cur_x = (pos / TAB_SIZE) + (editor->cur_rend_x - pos);
+		}
+	}
+
 }
 
 // Editor scrolls
