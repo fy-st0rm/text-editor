@@ -23,6 +23,11 @@ Editor* editor_new(Window* window, TTF_Font* font, char* file_name, bool modifia
 	editor->cur_rend_x = 0;
 	editor->cur_rend_y = 0;
 
+	// Selection
+	editor->sel_start = 0;
+	editor->sel_end = 0;
+	editor->sel_init = 0;
+
 	// Scroll
 	editor->scroll_x = 0;
 	editor->scroll_y = 0;
@@ -850,7 +855,87 @@ void editor_scroll_down(Editor* editor)
 	}
 }
 
+// Clipboard handlings
+void editor_copy(Editor* editor)
+{
+	int size = editor->sel_end - editor->sel_start + 1;
+	char* selected = calloc(size, sizeof(char));
+	memcpy(selected, editor->text_buffer + editor->sel_start, size);
+	SDL_SetClipboardText(selected);
+	free(selected);
+}
+
+void editor_paste(Editor* editor)
+{
+	if (SDL_HasClipboardText())
+	{
+		char* text = SDL_GetClipboardText();
+		for (int i = 0; i < strlen(text); i++)
+		{
+			editor_insert(editor, text[i]);
+		}
+		SDL_free(text);
+	}
+}
+
+// Editor selection
+void editor_init_norm_select(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+	editor->sel_start = pos;
+	editor->sel_end = pos;
+	editor->sel_init = pos;
+}
+
+void editor_norm_select(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+	if (pos > editor->sel_init)
+	{
+		editor->sel_start = editor->sel_init;
+		editor->sel_end = pos;
+	}
+	else if (pos < editor->sel_init)
+	{
+		editor->sel_start = pos;
+		editor->sel_end = editor->sel_init;
+	}
+}
+
 // Editor rendering
+void editor_render_select(Editor* editor, Colors* colors_rgb)
+{
+	// Rendering the selection line 
+	int x = 0, y = 0, w = editor->cur_w;
+	for (int i = 0; i < editor->buffer_len; i++)
+	{
+		w = editor->cur_w;
+
+		if (i >= editor->sel_start && i <= editor->sel_end)
+		{
+			if (editor->text_buffer[i] == '\t')
+			{
+				w = (TAB_SIZE) * editor->cur_w;
+			}
+
+			SDL_Rect pos = { (x - editor->scroll_x) * editor->cur_w, (y - editor->scroll_y) * editor->cur_h, w, editor->cur_h };
+			SDL_SetRenderDrawColor(editor->window->renderer, colors_rgb->selection.r, colors_rgb->selection.g, colors_rgb->selection.b, colors_rgb->selection.a);
+			SDL_RenderFillRect(editor->window->renderer, &pos);
+		}
+
+
+		if (editor->text_buffer[i] == '\n')
+		{
+			y++;
+			x = 0;
+		}
+		else if (editor->text_buffer[i] == '\t')
+			x += TAB_SIZE;
+		else
+			x++;
+	}
+}
+
 void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Colors* colors_rgb)
 {
 	// Setting up the render target for text buffer
@@ -858,6 +943,11 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 	SDL_SetRenderDrawColor(editor->window->renderer, colors_rgb->editor_bg.r, colors_rgb->editor_bg.g, colors_rgb->editor_bg.b, colors_rgb->editor_bg.a);
 	SDL_RenderClear(editor->window->renderer);
 
+	if (editor->window->mode == VISUAL)
+	{
+		editor_norm_select(editor);
+		editor_render_select(editor, colors_rgb);
+	}
 
 	// Flushing the buffer into the render target
 	if (editor->buffer_len > 0)
@@ -906,6 +996,7 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 			}
 		}
 	}
+
 
 	// Rendering cursor
 	SDL_Rect cur_rect = { (editor->cur_rend_x - editor->scroll_x) * editor->cur_w,  (editor->cur_rend_y - editor->scroll_y) * editor->cur_h , editor->cur_w, editor->cur_h };

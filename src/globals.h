@@ -45,6 +45,7 @@ typedef struct
 
 	// Cursor
 	SDL_Color cursor;
+	SDL_Color selection;
 } Colors;
 
 static Colors* colors_rgb;
@@ -71,7 +72,8 @@ static void init_colors()
 	SDL_Color command_md = { 184, 187,  38 };
 	
 	// Cursor
-	SDL_Color cursor = { 235, 219, 178 };
+	SDL_Color cursor    = { 235, 219, 178 };
+	SDL_Color selection = { 146, 131, 116 };
 
 	colors_rgb->editor_bg = editor_bg;
 	colors_rgb->editor_fg = editor_fg;
@@ -89,6 +91,7 @@ static void init_colors()
 	colors_rgb->command_md = command_md;
 
 	colors_rgb->cursor = cursor;
+	colors_rgb->selection = selection;
 }
 
 static void free_colors()

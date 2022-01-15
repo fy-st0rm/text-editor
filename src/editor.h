@@ -16,6 +16,9 @@ typedef struct
 
 	// Cursor
 	int cur_x, cur_y, cur_rend_x, cur_rend_y, cur_w, cur_h;
+
+	// Selection
+	int sel_start, sel_end, sel_init;
 	
 	// Scroll
 	int scroll_x, scroll_y;
@@ -73,7 +76,16 @@ void			editor_scroll_right (Editor* editor);
 void			editor_scroll_up	(Editor* editor);
 void			editor_scroll_down	(Editor* editor);
 
+// Clipboard handlings
+void			editor_copy			(Editor* editor);
+void			editor_paste		(Editor* editor);
+
+// Editor selection
+void			editor_init_norm_select	(Editor* editor);
+void			editor_norm_select  (Editor* editor);
+
 // Editor rendering
+void			editor_render_select(Editor* editor, Colors* colors_rgb);
 void			editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Colors* color_rgb);
 void 			editor_render_line	(Editor* editor, int start, int end, TTF_Font* font, Colors* color_rgb);
 void			editor_render_bar	(Editor* editor, TTF_Font* font, Colors* color_rgb);

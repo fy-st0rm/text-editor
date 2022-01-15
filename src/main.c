@@ -5,11 +5,11 @@
 
 /*
  * TODO: [ ] Vim like modes ([X]NORMAL, [X]INSERT, [X]COMMAND, [ ]VISUAL)
- * TODO: [ ] Colors
- * TODO: [ ] Fix the memory leak while resizing the window
- * TODO: [ ] Clipboard handling
  * TODO: [ ] Text selection
  * TODO: [ ] Config
+ * TODO: [ ] Colors
+ * TODO: [ ] Fix the memory leak while resizing the window
+ * TODO: [X] Clipboard handling
  * TODO: [X] Command line
  * TODO: [X] Read and write to the file
  * TODO: [X] Proper cursor movement
@@ -317,6 +317,23 @@ int main(int argc, char** argv)
 								}
 							}
 							break;
+						
+						// To paste
+						case SDLK_p:
+							if (buffers[curr_buffer]->modifiable)
+							{
+								editor_paste(buffers[curr_buffer]);
+							}
+							else
+							{
+								cmd_line_clear_input(cmd_line);
+								char* reply = replies[5];
+								for (int i = 0; i < strlen(reply); i++)
+								{
+									cmd_line_insert(cmd_line, reply[i]);
+								}
+							}
+							break;
 
 						// Mode switcher
 						case SDLK_i:
@@ -337,7 +354,12 @@ int main(int argc, char** argv)
 								}
 							}
 							break;
-						
+
+						case SDLK_v:
+							editor_init_norm_select(buffers[curr_buffer]);
+							window->mode = VISUAL;
+							break;
+					
 						case SDLK_SEMICOLON:
 							if (keys->shift)
 							{
@@ -346,6 +368,25 @@ int main(int argc, char** argv)
 								cmd_line_clear_input(cmd_line);
 								halt = true;
 							}
+							break;
+					}
+					hjkl_movement(buffers[curr_buffer], event, keys);
+					arrow_movement(buffers[curr_buffer], event, keys);
+				}
+				// VISUAL MODE SPECIFIC
+				else if (window->mode == VISUAL)
+				{
+					switch (event.key.keysym.sym)
+					{
+						// For copying
+						case SDLK_y:
+							editor_copy(buffers[curr_buffer]);
+							window->mode = NORMAL;
+							break;
+
+						// Mode switching
+						case SDLK_ESCAPE:
+							window->mode = NORMAL;
 							break;
 					}
 					hjkl_movement(buffers[curr_buffer], event, keys);
