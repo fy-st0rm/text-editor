@@ -1,6 +1,7 @@
 #include "editor.h"
 
-Editor* editor_new(Window* window, TTF_Font* font, char* file_name)
+
+Editor* editor_new(Window* window, TTF_Font* font, char* file_name, bool modifiable)
 {
 	Editor* editor = (Editor*) malloc(sizeof(Editor));
 	editor->window = window;
@@ -25,6 +26,10 @@ Editor* editor_new(Window* window, TTF_Font* font, char* file_name)
 	// Scroll
 	editor->scroll_x = 0;
 	editor->scroll_y = 0;
+
+	// Flags
+	editor->modifiable = modifiable;
+	editor->edited = false;
 
 	editor_gen_texture(editor, window->renderer, font);
 	editor_read_file(editor, editor->file_name);
@@ -75,8 +80,9 @@ int editor_read_file(Editor* editor, char* file_name)
 
 		fclose(file);
 		editor->cur_x = editor->cur_y = editor->cur_rend_x = editor->cur_rend_y = 0;
-
 		strcpy(editor->file_name, file_name);
+
+		editor->edited = false;
 		return 3;
 	}
 	return 1;
@@ -96,6 +102,7 @@ int editor_write_file(Editor* editor, char* file_name)
 		fclose(file);
 
 		strcpy(editor->file_name, file_name);
+		editor->edited = false;
 		return 0;
 	}
 	return 1; 
@@ -122,6 +129,36 @@ int	editor_get_cur_pos(Editor* editor, int x, int y)
 	}
 	pos += x;
 	return pos;
+}
+
+void editor_set_cur_pos(Editor* editor, int pos)
+{
+	if (pos <= editor->buffer_len)
+	{
+		editor->cur_x = editor->cur_y = 0;
+		editor->cur_rend_x = editor->cur_rend_y = 0;
+
+		for (int i = 0; i < pos; i++)
+		{
+			char ch = editor->text_buffer[i];
+			if (ch == '\n')
+			{
+				editor->cur_y++;
+				editor->cur_rend_y++;
+				editor->cur_x = editor->cur_rend_x = 0;
+			}
+			else if (ch == '\t')
+			{
+				editor->cur_x++;
+				editor->cur_rend_x += TAB_SIZE;
+			}
+			else
+			{
+				editor->cur_x++;
+				editor->cur_rend_x++;
+			}
+		}
+	}
 }
 
 int editor_get_line_no(Editor* editor)
@@ -238,6 +275,8 @@ void editor_insert(Editor* editor, char chr)
 	{
 		editor->cur_rend_x += TAB_SIZE - 1;
 	}
+
+	editor->edited = true;
 }
 
 void editor_backspace(Editor* editor)
@@ -288,6 +327,18 @@ void editor_backspace(Editor* editor)
 			}
 		}
 
+		// overiting the memory in that position with the memory infront of that position
+		memmove(&editor->text_buffer[pos], &editor->text_buffer[pos+1], editor->buffer_len - pos);
+		if (editor->buffer_len > 0)
+			editor->buffer_len--;
+	}
+}
+
+void editor_delete(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+	if (pos >= 0 && pos < editor->buffer_len)
+	{
 		// overiting the memory in that position with the memory infront of that position
 		memmove(&editor->text_buffer[pos], &editor->text_buffer[pos+1], editor->buffer_len - pos);
 		if (editor->buffer_len > 0)
@@ -451,6 +502,36 @@ void editor_cur_down(Editor* editor)
 		else if (editor->cur_rend_x != 0)
 		{
 			editor->cur_x = (pos / TAB_SIZE) + (editor->cur_rend_x - pos);
+		}
+	}
+}
+
+void editor_jump_left(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y) - 1;
+	for (int i = pos; i > 0; i--) 
+	{
+		char ch = editor->text_buffer[i];
+		char characters[] = " (){}[]=+-_,./\\:;";
+		if (strchr(characters, ch) != NULL)
+		{
+			editor_set_cur_pos(editor, i);
+			break;
+		}
+	}
+}
+
+void editor_jump_right(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y) + 1;
+	for (int i = pos; i < editor->buffer_len; i++)
+	{
+		char ch = editor->text_buffer[i];
+		char characters[] = " (){}[]=+-_,./\\:;";
+		if (strchr(characters, ch) != NULL)
+		{
+			editor_set_cur_pos(editor, i);
+			break;
 		}
 	}
 }
@@ -646,6 +727,20 @@ void editor_render_bar(Editor* editor, TTF_Font* font, Colors* colors_rgb)
 	SDL_Rect pos = { editor->window->width - w - 5, 0, w, h };
 	SDL_RenderCopy(editor->window->renderer, cur_pos_texture, NULL, &pos);
 	SDL_DestroyTexture(cur_pos_texture);
+
+	// Edited indicator
+	if (editor->edited)
+	{
+		char sym[2] = "+\0";
+		SDL_Texture* sym_texture = create_texture(editor->window->renderer, font, sym);
+		SDL_Rect pos = { editor->window->width - w - 10, 0, w, h };
+		SDL_QueryTexture(sym_texture, NULL, NULL, &w, &h);
+		pos.x -= w;
+		pos.w = w;
+		pos.h = h;
+		SDL_RenderCopy(editor->window->renderer, sym_texture, NULL, &pos);
+		SDL_DestroyTexture(sym_texture);
+	}
 }
 
 void editor_render(Editor* editor, Window* window, TTF_Font* font, Colors* colors_rgb)

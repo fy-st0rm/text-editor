@@ -1,7 +1,7 @@
 CC = gcc
 SRC = *.c
 OBJ = *.o
-OUT = editor
+OUT = ../editor
 
 LIBS = -lSDL2main -lSDL2 -lSDL2_ttf
 
@@ -10,5 +10,3 @@ all:
 	$(CC) -o $(OUT) $(OBJ) $(LIBS)
 
 	rm *.o
-
-	./$(OUT)

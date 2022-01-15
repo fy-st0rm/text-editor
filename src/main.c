@@ -4,13 +4,13 @@
 #include "cmd_line.h"
 
 /*
- * TODO: [ ] Command line
  * TODO: [ ] Vim like modes (NORMAL, INSERT, COMMAND, VISUAL)
  * TODO: [ ] Colors
  * TODO: [ ] Fix the memory leak while resizing the window
- * TODO: [ ] Read and write to the file
  * TODO: [ ] Clipboard handling
  * TODO: [ ] Text selection
+ * TODO: [X] Command line
+ * TODO: [X] Read and write to the file
  * TODO: [X] Proper cursor movement
  * TODO: [X] Deal with tabs
  * TODO: [X] Render only visible characters
@@ -80,7 +80,7 @@ int main(int argc, char** argv)
 	init_colors();
 
 	// Loading font
-	char* font_path = "JetBrainsMonoNL-Regular.ttf";
+	char* font_path = "font/JetBrainsMonoNL-Regular.ttf";
 	int font_size = 16;
 	TTF_Font* font = sdl_check_ptr(TTF_OpenFont(font_path, font_size));
 
@@ -97,9 +97,12 @@ int main(int argc, char** argv)
 
 	// List of buffers
 	int curr_buffer = 0;
-	Editor* buffers[1];
-	Editor* editor = editor_new(window, font, file_name); 
+	int buffer_amt = 1;
+	Editor** buffers = calloc(buffer_amt, sizeof(Editor));
+	Editor* editor = editor_new(window, font, file_name, true); 
 	buffers[0] = editor;
+
+	editor_set_cur_pos(editor, 109);
 
 	// Flags
 	bool loop = true;
@@ -155,6 +158,9 @@ int main(int argc, char** argv)
 						case SDLK_BACKSPACE:
 							editor_backspace(buffers[curr_buffer]);
 							break;
+						case SDLK_DELETE:
+							editor_delete(buffers[curr_buffer]);
+							break;
 
 						// Mode switcher
 						case SDLK_ESCAPE:
@@ -168,10 +174,63 @@ int main(int argc, char** argv)
 				{
 					switch (event.key.keysym.sym)
 					{
+						case SDLK_DELETE:
+						case SDLK_x:
+							if (buffers[curr_buffer]->modifiable)
+								editor_delete(buffers[curr_buffer]);
+							else
+							{
+								cmd_line_clear_input(cmd_line);
+								char* reply = replies[5];
+								for (int i = 0; i < strlen(reply); i++)
+								{
+									cmd_line_insert(cmd_line, reply[i]);
+								}
+							}
+							break;
+
+						case SDLK_s:
+							if (buffers[curr_buffer]->modifiable)
+							{
+								editor_delete(buffers[curr_buffer]);
+								window->mode = INSERT;
+								halt = true;
+							}
+							else
+							{
+								cmd_line_clear_input(cmd_line);
+								char* reply = replies[5];
+								for (int i = 0; i < strlen(reply); i++)
+								{
+									cmd_line_insert(cmd_line, reply[i]);
+								}
+							}
+							break;
+						
+						case SDLK_w:
+							editor_jump_right(buffers[curr_buffer]);
+							break;
+						
+						case SDLK_b:
+							editor_jump_left(buffers[curr_buffer]);
+							break;
+
 						// Mode switcher
 						case SDLK_i:
-							window->mode = INSERT;
-							halt = true;
+							if (buffers[curr_buffer]->modifiable)
+							{
+								window->mode = INSERT;
+								halt = true;
+							}
+							else
+							{
+								cmd_line_clear_input(cmd_line);
+								char* reply = replies[5];
+								for (int i = 0; i < strlen(reply); i++)
+								{
+									cmd_line_insert(cmd_line, reply[i]);
+								}
+							}
 							break;
 						
 						case SDLK_SEMICOLON:
@@ -190,7 +249,7 @@ int main(int argc, char** argv)
 					switch (event.key.keysym.sym)
 					{
 						case SDLK_RETURN:
-							cmd_line_parse(cmd_line, buffers, &curr_buffer);
+							cmd_line_parse(cmd_line, buffers, &curr_buffer, &buffer_amt);
 							cmd_line_clear_prompt(cmd_line);
 							window->mode = NORMAL;
 							break;
@@ -206,7 +265,6 @@ int main(int argc, char** argv)
 						case SDLK_RIGHT:
 							cmd_line_cur_right(cmd_line);
 							break;
-
 
 						// Mode switcher
 						case SDLK_ESCAPE:
@@ -245,6 +303,8 @@ int main(int argc, char** argv)
 			}
 		}
 	}
+
+	free(buffers);
 
 	free_colors();
 	cmd_line_destroy(cmd_line);

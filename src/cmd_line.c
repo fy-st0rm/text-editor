@@ -62,7 +62,81 @@ void cmd_line_insert(Cmd_line* cmd_line, char ch)
 	}
 }
 
-void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer)
+void cmd_line_backspace(Cmd_line* cmd_line)
+{
+	if (cmd_line->cur_x > 0)
+	{
+		cmd_line->cur_x--;
+		memmove(&cmd_line->input[cmd_line->cur_x], &cmd_line->input[cmd_line->cur_x + 1], strlen(cmd_line->input) - cmd_line->cur_x);
+	}
+}
+
+void cmd_line_quit_with_save(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int* buffer_amt)
+{
+	if (!buffers[*curr_buffer]->edited)
+	{
+		editor_destroy(buffers[*curr_buffer]);
+		--*buffer_amt;
+		if (*buffer_amt > 0)
+		{
+			memmove(buffers[*curr_buffer], buffers[*curr_buffer + 1], buffer_amt + *curr_buffer);
+			--*curr_buffer;
+		}
+		else
+			*curr_buffer = -1;
+	}
+	else
+	{
+		char* reply = replies[4];
+		cmd_line_clear_input(cmd_line);
+		for (int i = 0; i < strlen(reply); i++)
+		{
+			cmd_line_insert(cmd_line, reply[i]);
+		}
+	}
+}
+
+void cmd_line_quit_without_save (Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int* buffer_amt)
+{
+	editor_destroy(buffers[*curr_buffer]);
+	--*buffer_amt;
+	if (*buffer_amt > 0)
+	{
+		memmove(buffers[*curr_buffer], buffers[*curr_buffer + 1], buffer_amt + *curr_buffer);
+		--*curr_buffer;
+	}
+	else
+		*curr_buffer = -1;
+}
+
+int cmd_line_save(Cmd_line* cmd_line, char* file_name, Editor** buffers, int* curr_buffer)
+{
+	int result = editor_write_file(buffers[*curr_buffer], file_name);
+
+	// Writing the msg log
+	char* reply = replies[result];
+	cmd_line_clear_input(cmd_line);
+	for (int i = 0; i < strlen(reply); i++)
+	{
+		cmd_line_insert(cmd_line, reply[i]);
+	}
+	return result;
+}
+
+void cmd_line_read(Cmd_line* cmd_line, char* file_name, Editor** buffers, int* curr_buffer)
+{
+	int result = editor_read_file(buffers[*curr_buffer], file_name);
+	
+	// Writing the msg log
+	char* reply = replies[result];
+	cmd_line_clear_input(cmd_line);
+	for (int i = 0; i < strlen(reply); i++)
+	{
+		cmd_line_insert(cmd_line, reply[i]);
+	}
+}
+
+void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int* buffer_amt)
 {
 	int size = 0;
 	int len = strlen(cmd_line->input);
@@ -97,8 +171,13 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer)
 		// Quiting the buffer
 		if (!strcmp(cmds[i], "q"))
 		{
-			editor_destroy(buffers[*curr_buffer]);
-			--*curr_buffer;
+			cmd_line_quit_with_save(cmd_line, buffers, curr_buffer, buffer_amt);
+			break;
+		}
+		// Quiting without saving the changes
+		else if (!strcmp(cmds[i], "q!"))
+		{
+			cmd_line_quit_without_save(cmd_line, buffers, curr_buffer, buffer_amt);
 			break;
 		}
 		// Saving the files
@@ -109,16 +188,8 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer)
 				strcpy(file_name, cmds[++i]);
 			else
 				strcpy(file_name, buffers[*curr_buffer]->file_name);
-
-			int result = editor_write_file(buffers[*curr_buffer], file_name);
-
-			// Writing the msg log
-			char* reply = replies[result];
-			cmd_line_clear_input(cmd_line);
-			for (int i = 0; i < strlen(reply); i++)
-			{
-				cmd_line_insert(cmd_line, reply[i]);
-			}
+			
+			cmd_line_save(cmd_line, file_name, buffers, curr_buffer);
 		}
 		// Reading the files
 		else if (!strcmp(cmds[i], "e"))
@@ -129,27 +200,21 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer)
 			if (size > i + 1)
 				strcpy(file_name, cmds[++i]);
 			
-			int result = editor_read_file(buffers[*curr_buffer], file_name);
-			
-			// Writing the msg log
-			char* reply = replies[result];
-			cmd_line_clear_input(cmd_line);
-			for (int i = 0; i < strlen(reply); i++)
-			{
-				cmd_line_insert(cmd_line, reply[i]);
-			}
+			cmd_line_read(cmd_line, file_name, buffers, curr_buffer);
 		}
-	}
+		// Save and quit
+		else if (!strcmp(cmds[i], "wq"))
+		{
+			char file_name[256];
+			if (size > i + 1)
+				strcpy(file_name, cmds[++i]);
+			else
+				strcpy(file_name, buffers[*curr_buffer]->file_name);
 
-
-}
-
-void cmd_line_backspace(Cmd_line* cmd_line)
-{
-	if (cmd_line->cur_x > 0)
-	{
-		cmd_line->cur_x--;
-		memmove(&cmd_line->input[cmd_line->cur_x], &cmd_line->input[cmd_line->cur_x + 1], strlen(cmd_line->input) - cmd_line->cur_x);
+			int result = cmd_line_save(cmd_line, file_name, buffers, curr_buffer);
+			if (result == 0)
+				cmd_line_quit_with_save(cmd_line, buffers, curr_buffer, buffer_amt);
+		}
 	}
 }
 

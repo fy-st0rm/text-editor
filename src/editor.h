@@ -19,12 +19,15 @@ typedef struct
 	// Scroll
 	int scroll_x, scroll_y;
 
+	// Editor flags
+	bool modifiable, edited;
+
 	SDL_Texture* editor_texture;
 	SDL_Texture* line_texture;
 	SDL_Texture* bar_texture;
 } Editor;
 
-Editor* 		editor_new			(Window* window, TTF_Font* font, char* file_name);
+Editor* 		editor_new			(Window* window, TTF_Font* font, char* file_name, bool modifiable);
 void			editor_destroy		(Editor* editor);
 void 			editor_resize		(Editor* editor);
 
@@ -34,17 +37,21 @@ int				editor_write_file	(Editor* editor, char* file_name);
 
 // Editor buffer management
 int				editor_get_cur_pos	(Editor* editor, int x, int y);
+void			editor_set_cur_pos	(Editor* editor, int pos);
 int				editor_get_line_no	(Editor* editor);
 void			editor_get_line		(Editor* editor, int line_no, char* out);
 int				editor_line_len		(Editor* editor, int line_no);
 void			editor_insert		(Editor* editor, char chr);
 void			editor_backspace	(Editor* editor);
+void			editor_delete		(Editor* editor);
 
 // Editor cursor
 void			editor_cur_left		(Editor* editor);
 void			editor_cur_right	(Editor* editor);
 void			editor_cur_up		(Editor* editor);
 void			editor_cur_down		(Editor* editor);
+void			editor_jump_left	(Editor* editor);
+void			editor_jump_right	(Editor* editor);
 
 // Editor scrolls
 void			editor_scroll_left	(Editor* editor);
