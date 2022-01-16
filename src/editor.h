@@ -25,6 +25,7 @@ typedef struct
 
 	// Editor flags
 	bool modifiable, edited;
+	bool norm_visual, line_visual;
 
 	SDL_Texture* editor_texture;
 	SDL_Texture* line_texture;
@@ -52,6 +53,7 @@ int				editor_line_len		(Editor* editor, int line_no);
 void			editor_insert		(Editor* editor, char chr);
 void			editor_insert_nl_bel(Editor* editor);
 void			editor_insert_nl_abv(Editor* editor);
+void			editor_replace_sel	(Editor* editor);
 
 // Delete
 void			editor_backspace	(Editor* editor);
@@ -59,6 +61,7 @@ void			editor_delete		(Editor* editor);
 void			editor_delete_line	(Editor* editor);
 void			editor_delete_left	(Editor* editor);
 void			editor_delete_right	(Editor* editor);
+void			editor_delete_sel	(Editor* editor);
 
 // Editor cursor
 void			editor_cur_left		(Editor* editor);
@@ -82,7 +85,10 @@ void			editor_paste		(Editor* editor);
 
 // Editor selection
 void			editor_init_norm_select	(Editor* editor);
+void			editor_init_line_select (Editor* editor);
 void			editor_norm_select  (Editor* editor);
+void			editor_line_select	(Editor* editor);
+
 
 // Editor rendering
 void			editor_render_select(Editor* editor, Colors* colors_rgb);

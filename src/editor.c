@@ -35,6 +35,8 @@ Editor* editor_new(Window* window, TTF_Font* font, char* file_name, bool modifia
 	// Flags
 	editor->modifiable = modifiable;
 	editor->edited = false;
+	editor->norm_visual = false;
+	editor->line_visual = false;
 
 	editor_gen_texture(editor, window->renderer, font);
 	editor_read_file(editor, editor->file_name);
@@ -347,6 +349,12 @@ void editor_insert_nl_abv(Editor* editor)
 	}
 }
 
+void editor_replace_sel(Editor* editor)
+{
+	editor_delete_sel(editor);
+	editor_paste(editor);
+}
+
 // Delete functions
 void editor_backspace(Editor* editor)
 {
@@ -506,6 +514,20 @@ void editor_delete_right(Editor* editor)
 			break;
 		}
 	}
+}
+
+void editor_delete_sel(Editor* editor)
+{
+	int size = editor->sel_end - editor->sel_start + 1;
+	char* new_buffer = calloc(editor->buffer_len, sizeof(char));
+	memcpy(new_buffer, editor->text_buffer, editor->sel_start);
+	strcpy(new_buffer + editor->sel_start, editor->text_buffer + editor->sel_end + 1);
+	free(editor->text_buffer);
+
+	editor->text_buffer = new_buffer;
+	editor->buffer_len -= size;
+	
+	editor_set_cur_pos(editor, editor->sel_start);
 }
 
 // Editor cursor
@@ -885,6 +907,41 @@ void editor_init_norm_select(Editor* editor)
 	editor->sel_start = pos;
 	editor->sel_end = pos;
 	editor->sel_init = pos;
+
+	editor->norm_visual = true;
+	editor->line_visual = false;
+}
+
+void editor_init_line_select(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+	for (int i = pos; i < editor->buffer_len; i++)
+	{
+		char ch = editor->text_buffer[i];
+		if (ch == '\n')
+		{
+			editor->sel_end = i;
+			break;
+		}
+	}
+
+	for (int i = pos - 1; i >= 0; i--) 
+	{
+		char ch = editor->text_buffer[i];
+		if (ch == '\n')
+		{
+			editor->sel_start = i + 1;
+			break;
+		}
+		else if (i == 0)
+		{
+			editor->sel_start = i;
+		}
+	}
+	// Initial line
+	editor->sel_init = editor->cur_y;
+	editor->norm_visual = false;
+	editor->line_visual = true;
 }
 
 void editor_norm_select(Editor* editor)
@@ -899,6 +956,65 @@ void editor_norm_select(Editor* editor)
 	{
 		editor->sel_start = pos;
 		editor->sel_end = editor->sel_init;
+	}
+}
+
+void editor_line_select(Editor* editor)
+{
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+	if (editor->cur_y < editor->sel_init)
+	{
+		for (int i = pos; i >= 0; i--) 
+		{
+			char ch = editor->text_buffer[i];
+			if (ch == '\n')
+			{
+				editor->sel_start = i + 1;
+				break;
+			}
+			else if (i == 0)
+			{
+				editor->sel_start = 0;
+			}
+		}
+	}
+	else if (editor->cur_y > editor->sel_init)
+	{
+		for (int i = pos; i < editor->buffer_len; i++)
+		{
+			char ch = editor->text_buffer[i];
+			if (ch == '\n')
+			{
+				editor->sel_end = i;
+				break;
+			}
+		}
+	}
+	else if (editor->cur_y == editor->sel_init)
+	{
+		for (int i = pos; i < editor->buffer_len; i++)
+		{
+			char ch = editor->text_buffer[i];
+			if (ch == '\n')
+			{
+				editor->sel_end = i;
+				break;
+			}
+		}
+
+		for (int i = pos - 1; i >= 0; i--) 
+		{
+			char ch = editor->text_buffer[i];
+			if (ch == '\n')
+			{
+				editor->sel_start = i + 1;
+				break;
+			}
+			else if (i == 0)
+			{
+				editor->sel_start = i;
+			}
+		}
 	}
 }
 
@@ -923,7 +1039,6 @@ void editor_render_select(Editor* editor, Colors* colors_rgb)
 			SDL_RenderFillRect(editor->window->renderer, &pos);
 		}
 
-
 		if (editor->text_buffer[i] == '\n')
 		{
 			y++;
@@ -943,9 +1058,13 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 	SDL_SetRenderDrawColor(editor->window->renderer, colors_rgb->editor_bg.r, colors_rgb->editor_bg.g, colors_rgb->editor_bg.b, colors_rgb->editor_bg.a);
 	SDL_RenderClear(editor->window->renderer);
 
+	// Selection rendering and updating
 	if (editor->window->mode == VISUAL)
 	{
-		editor_norm_select(editor);
+		if (editor->norm_visual)
+			editor_norm_select(editor);
+		else if (editor->line_visual)
+			editor_line_select(editor);
 		editor_render_select(editor, colors_rgb);
 	}
 
@@ -996,7 +1115,6 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 			}
 		}
 	}
-
 
 	// Rendering cursor
 	SDL_Rect cur_rect = { (editor->cur_rend_x - editor->scroll_x) * editor->cur_w,  (editor->cur_rend_y - editor->scroll_y) * editor->cur_h , editor->cur_w, editor->cur_h };

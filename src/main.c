@@ -4,11 +4,13 @@
 #include "cmd_line.h"
 
 /*
- * TODO: [ ] Vim like modes ([X]NORMAL, [X]INSERT, [X]COMMAND, [ ]VISUAL)
- * TODO: [ ] Text selection
+ * TODO: [ ] Multiple buffers
  * TODO: [ ] Config
  * TODO: [ ] Colors
  * TODO: [ ] Fix the memory leak while resizing the window
+ * TODO: [X] Text selection
+ * TODO: [X] Vim like modes ([X]NORMAL, [X]INSERT, [X]COMMAND, [ ]VISUAL)
+ * TODO: [X] Cut, delete selected, replace selected
  * TODO: [X] Clipboard handling
  * TODO: [X] Command line
  * TODO: [X] Read and write to the file
@@ -166,7 +168,7 @@ int main(int argc, char** argv)
 	int curr_buffer = 0;
 	int buffer_amt = 1;
 	Editor** buffers = calloc(buffer_amt, sizeof(Editor));
-	Editor* editor = editor_new(window, font, file_name, true); 
+	Editor* editor = editor_new(window, font, file_name, true);
 	buffers[0] = editor;
 
 	// Flags
@@ -356,7 +358,11 @@ int main(int argc, char** argv)
 							break;
 
 						case SDLK_v:
-							editor_init_norm_select(buffers[curr_buffer]);
+							if (keys->shift)
+								editor_init_line_select(buffers[curr_buffer]);
+							else
+								editor_init_norm_select(buffers[curr_buffer]);
+
 							window->mode = VISUAL;
 							break;
 					
@@ -383,6 +389,45 @@ int main(int argc, char** argv)
 							editor_copy(buffers[curr_buffer]);
 							window->mode = NORMAL;
 							break;
+
+						// For delete
+						case SDLK_DELETE:
+						case SDLK_x:
+							editor_copy(buffers[curr_buffer]);
+							
+							if (buffers[curr_buffer]->modifiable)
+							{
+								editor_delete_sel(buffers[curr_buffer]);
+							}
+							else
+							{
+								cmd_line_clear_input(cmd_line);
+								char* reply = replies[5];
+								for (int i = 0; i < strlen(reply); i++)
+								{
+									cmd_line_insert(cmd_line, reply[i]);
+								}
+							}
+							window->mode = NORMAL;
+							break;
+
+						// Replacing
+						case SDLK_p:
+							if (buffers[curr_buffer]->modifiable)
+							{
+								editor_replace_sel(buffers[curr_buffer]);
+							}
+							else
+							{
+								cmd_line_clear_input(cmd_line);
+								char* reply = replies[5];
+								for (int i = 0; i < strlen(reply); i++)
+								{
+									cmd_line_insert(cmd_line, reply[i]);
+								}
+							}
+							window->mode = NORMAL;
+
 
 						// Mode switching
 						case SDLK_ESCAPE:
@@ -460,14 +505,14 @@ int main(int argc, char** argv)
 				{
 					case SDL_WINDOWEVENT_RESIZED:
 						SDL_GetWindowSize(window->window, &window->width, &window->height);
-						for (int i = 0; i < sizeof(buffers) / sizeof(buffers[0]); i++)
+						for (int i = 0; i < buffer_amt; i++)
 							editor_resize(buffers[i]);
 						cmd_line_resize(cmd_line);
 						break;
 				}
 			}
 
-			if (curr_buffer < 0)
+			if (buffer_amt <= 0)
 			{
 				loop = false;
 			}
@@ -475,7 +520,7 @@ int main(int argc, char** argv)
 			{
 				window_clear(window, colors_rgb->editor_bg); 
 				
-				for (int i = 0; i < sizeof(buffers) / sizeof(buffers[0]); i++)
+				for (int i = 0; i < buffer_amt; i++)
 					editor_render(editor, window, font, colors_rgb);
 
 				cmd_line_render(cmd_line, font, colors_rgb);
