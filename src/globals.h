@@ -20,13 +20,15 @@ static int font_size_1 = 16;
 static int font_size_2 = 16;
 
 // Replies
-static const char replies[6][100] = {
+static const char replies[8][100] = {
 	{"S0: File saved sucessfully."},
 	{"E1: No file name."},
 	{"E2: Failed to open file."},
 	{"S1: File read sucessfully."},
 	{"E3: File is not saved. (add ! to exit without saving)"},
-	{"E4: Buffer is not modifiable."}
+	{"E4: Buffer is not modifiable."},
+	{"S2: Created new buffer."},
+	{"S3: Sucessfully destroyed the buffer."}
 };
 
 // Colors

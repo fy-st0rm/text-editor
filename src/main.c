@@ -4,10 +4,10 @@
 #include "cmd_line.h"
 
 /*
- * TODO: [ ] Multiple buffers
  * TODO: [ ] Config
  * TODO: [ ] Colors
  * TODO: [ ] Fix the memory leak while resizing the window
+ * TODO: [X] Multiple buffers
  * TODO: [X] Font scaling
  * TODO: [X] Text selection
  * TODO: [X] Vim like modes ([X]NORMAL, [X]INSERT, [X]COMMAND, [ ]VISUAL)
@@ -45,17 +45,33 @@ Keys* init_keys()
 	keys->d = false;
 }
 
-void arrow_movement(Editor* editor, SDL_Event event, Keys* keys)
+void arrow_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer, int buffer_amt)
 {
 	switch (event.key.keysym.sym)
 	{
 		// Cursor movements
 		case SDLK_LEFT:
-			editor_cur_left(editor);
+			if (keys->ctrl)
+			{
+				if (*curr_buffer - 1 >= 0)
+				{
+					--*curr_buffer;
+				}
+			}
+			else
+				editor_cur_left(editor);
 			break;
 
 		case SDLK_RIGHT:
-			editor_cur_right(editor);
+			if (keys->ctrl)
+			{
+				if (*curr_buffer + 1 < buffer_amt)
+				{
+					++*curr_buffer;
+				}
+			}
+			else
+				editor_cur_right(editor);
 			break;
 
 		case SDLK_UP:
@@ -74,17 +90,33 @@ void arrow_movement(Editor* editor, SDL_Event event, Keys* keys)
 	}
 }
 
-void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys)
+void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer, int buffer_amt)
 {
 	switch (event.key.keysym.sym)
 	{
 		// Cursor movements
 		case SDLK_h:
-			editor_cur_left(editor);
+			if (keys->ctrl)
+			{
+				if (*curr_buffer - 1 >= 0)
+				{
+					--*curr_buffer;
+				}
+			}
+			else
+				editor_cur_left(editor);
 			break;
 
 		case SDLK_l:
-			editor_cur_right(editor);
+			if (keys->ctrl)
+			{
+				if (*curr_buffer + 1 < buffer_amt)
+				{
+					++*curr_buffer;
+				}
+			}
+			else
+				editor_cur_right(editor);
 			break;
 
 		case SDLK_k:
@@ -174,7 +206,7 @@ int main(int argc, char** argv)
 	// List of buffers
 	int curr_buffer = 0;
 	int buffer_amt = 1;
-	Editor** buffers = calloc(buffer_amt, sizeof(Editor));
+	Editor** buffers = calloc(buffer_amt * buffer_amt, sizeof(Editor));
 	Editor* editor = editor_new(window, font_1, font_2, file_name, true);
 	buffers[0] = editor;
 
@@ -241,7 +273,7 @@ int main(int argc, char** argv)
 							window->mode = NORMAL;
 							break;
 					}
-					arrow_movement(buffers[curr_buffer], event, keys);
+					arrow_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt);
 				}
 				// NORMAL MODE SPECIFIC
 				else if (window->mode == NORMAL)
@@ -344,6 +376,32 @@ int main(int argc, char** argv)
 							}
 							break;
 
+						// To create new buffer
+						case SDLK_n:
+							if (keys->ctrl)
+							{
+								buffer_amt++;
+								curr_buffer++;
+
+								Editor** new_buffers = calloc(buffer_amt * buffer_amt, sizeof(Editor));
+								memcpy(new_buffers, buffers, sizeof(Editor) * (buffer_amt - 1) * (buffer_amt - 1));
+
+								Editor* new_buffer = editor_new(window, font_1, font_2, "", true);
+								new_buffers[curr_buffer] = new_buffer;
+
+								free(buffers);
+								buffers = new_buffers;
+
+								// Writing the msg in cmdline
+								cmd_line_clear_input(cmd_line);
+								char* reply = replies[6];
+								for (int i = 0; i < strlen(reply); i++)
+								{
+									cmd_line_insert(cmd_line, reply[i]);
+								}
+							}
+							break;
+
 						// Mode switcher
 						case SDLK_i:
 							if (buffers[curr_buffer]->modifiable)
@@ -383,8 +441,8 @@ int main(int argc, char** argv)
 							}
 							break;
 					}
-					hjkl_movement(buffers[curr_buffer], event, keys);
-					arrow_movement(buffers[curr_buffer], event, keys);
+					hjkl_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt);
+					arrow_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt);
 				}
 				// VISUAL MODE SPECIFIC
 				else if (window->mode == VISUAL)
@@ -441,8 +499,8 @@ int main(int argc, char** argv)
 							window->mode = NORMAL;
 							break;
 					}
-					hjkl_movement(buffers[curr_buffer], event, keys);
-					arrow_movement(buffers[curr_buffer], event, keys);
+					hjkl_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt);
+					arrow_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt);
 				}
 				// COMMAND MODE SPECIFIC
 				else if (window->mode == COMMAND)
@@ -529,8 +587,7 @@ int main(int argc, char** argv)
 				{
 					case SDL_WINDOWEVENT_RESIZED:
 						SDL_GetWindowSize(window->window, &window->width, &window->height);
-						for (int i = 0; i < buffer_amt; i++)
-							editor_resize(buffers[i]);
+						editor_resize(buffers[curr_buffer]);
 						cmd_line_resize(cmd_line);
 						break;
 				}
@@ -543,10 +600,7 @@ int main(int argc, char** argv)
 			else
 			{
 				window_clear(window, colors_rgb->editor_bg); 
-				
-				for (int i = 0; i < buffer_amt; i++)
-					editor_render(editor, colors_rgb);
-
+				editor_render(buffers[curr_buffer], colors_rgb);
 				cmd_line_render(cmd_line, font_2, colors_rgb);
 			}
 		}

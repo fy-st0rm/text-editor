@@ -76,14 +76,38 @@ void cmd_line_quit_with_save(Cmd_line* cmd_line, Editor** buffers, int* curr_buf
 	if (!buffers[*curr_buffer]->edited)
 	{
 		editor_destroy(buffers[*curr_buffer]);
-		--*buffer_amt;
 		if (*buffer_amt > 0)
 		{
-			memmove(buffers[*curr_buffer], buffers[*curr_buffer + 1], buffer_amt + *curr_buffer);
-			--*curr_buffer;
+			Editor** new_buffers = calloc(*buffer_amt * *buffer_amt, sizeof(Editor));
+
+			// Copying the old data to new buffer excluding the current buffer
+			memcpy(new_buffers, buffers, sizeof(Editor) * (*curr_buffer * *curr_buffer));
+			if (*curr_buffer == 0)
+				memcpy(new_buffers + *curr_buffer, buffers + 1, sizeof(Editor) * (*buffer_amt - *curr_buffer) * (*buffer_amt - *curr_buffer));
+			else
+				memcpy(new_buffers + *curr_buffer, buffers + *curr_buffer, sizeof(Editor) * (*buffer_amt - *curr_buffer) * (*buffer_amt - *curr_buffer));
+
+			// Copying the new data into the old buffer
+			memcpy(buffers, new_buffers, *buffer_amt * *buffer_amt);
+			free(new_buffers);
+			--*buffer_amt;
+			
+			if (*curr_buffer > 0)
+				--*curr_buffer;
+			
+			// Writing the msg in cmdline
+			cmd_line_clear_input(cmd_line);
+			char* reply = replies[7];
+			for (int i = 0; i < strlen(reply); i++)
+			{
+				cmd_line_insert(cmd_line, reply[i]);
+			}
 		}
 		else
+		{
 			*curr_buffer = -1;
+			--*buffer_amt;
+		}
 	}
 	else
 	{
@@ -99,14 +123,38 @@ void cmd_line_quit_with_save(Cmd_line* cmd_line, Editor** buffers, int* curr_buf
 void cmd_line_quit_without_save (Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int* buffer_amt)
 {
 	editor_destroy(buffers[*curr_buffer]);
-	--*buffer_amt;
 	if (*buffer_amt > 0)
 	{
-		memmove(buffers[*curr_buffer], buffers[*curr_buffer + 1], buffer_amt + *curr_buffer);
-		--*curr_buffer;
+		Editor** new_buffers = calloc(*buffer_amt * *buffer_amt, sizeof(Editor));
+
+		// Copying the old data to new buffer excluding the current buffer
+		memcpy(new_buffers, buffers, sizeof(Editor) * (*curr_buffer * *curr_buffer));
+		if (*curr_buffer == 0)
+			memcpy(new_buffers + *curr_buffer, buffers + 1, sizeof(Editor) * (*buffer_amt - *curr_buffer) * (*buffer_amt - *curr_buffer));
+		else
+			memcpy(new_buffers + *curr_buffer, buffers + *curr_buffer, sizeof(Editor) * (*buffer_amt - *curr_buffer) * (*buffer_amt - *curr_buffer));
+	
+		// Copying the new data to old buffer
+		memcpy(buffers, new_buffers, *buffer_amt * *buffer_amt);
+		free(new_buffers);
+		--*buffer_amt;
+		
+		if (*curr_buffer > 0)
+			--*curr_buffer;
+
+		// Writing the msg in cmdline
+		cmd_line_clear_input(cmd_line);
+		char* reply = replies[7];
+		for (int i = 0; i < strlen(reply); i++)
+		{
+			cmd_line_insert(cmd_line, reply[i]);
+		}
 	}
 	else
+	{
 		*curr_buffer = -1;
+		--*buffer_amt;
+	}
 }
 
 int cmd_line_save(Cmd_line* cmd_line, char* file_name, Editor** buffers, int* curr_buffer)
