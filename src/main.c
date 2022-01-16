@@ -8,6 +8,7 @@
  * TODO: [ ] Config
  * TODO: [ ] Colors
  * TODO: [ ] Fix the memory leak while resizing the window
+ * TODO: [X] Font scaling
  * TODO: [X] Text selection
  * TODO: [X] Vim like modes ([X]NORMAL, [X]INSERT, [X]COMMAND, [ ]VISUAL)
  * TODO: [X] Cut, delete selected, replace selected
@@ -135,6 +136,13 @@ void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys)
 	}
 }
 
+// Font creation
+TTF_Font* create_font(char* font_path, int font_size)
+{
+	TTF_Font* font = sdl_check_ptr(TTF_OpenFont(font_path, font_size));
+	return font;
+}
+
 int main(int argc, char** argv)
 {
 	sdl_check(SDL_Init(SDL_INIT_VIDEO));
@@ -145,13 +153,12 @@ int main(int argc, char** argv)
 	init_colors();
 
 	// Loading font
-	char* font_path = "font/JetBrainsMonoNL-Regular.ttf";
-	int font_size = 16;
-	TTF_Font* font = sdl_check_ptr(TTF_OpenFont(font_path, font_size));
+	TTF_Font* font_1 = create_font(family1, font_size_1);
+	TTF_Font* font_2 = create_font(family2, font_size_2);
 
 	// Creating window and cmd line
 	Window* window = window_new("Text Editor", 800, 600);
-	Cmd_line* cmd_line = cmd_line_new(window, font);
+	Cmd_line* cmd_line = cmd_line_new(window, font_1);
 
 	// Reading the cmd line arguments
 	char file_name[256];
@@ -168,7 +175,7 @@ int main(int argc, char** argv)
 	int curr_buffer = 0;
 	int buffer_amt = 1;
 	Editor** buffers = calloc(buffer_amt, sizeof(Editor));
-	Editor* editor = editor_new(window, font, file_name, true);
+	Editor* editor = editor_new(window, font_1, font_2, file_name, true);
 	buffers[0] = editor;
 
 	// Flags
@@ -481,6 +488,23 @@ int main(int argc, char** argv)
 					case SDLK_RSHIFT:
 						keys->shift = true;
 						break;
+
+					// Change the font size
+					case SDLK_EQUALS:
+						if (keys->ctrl)
+						{
+							font_size_1++;
+							editor_change_font(buffers[curr_buffer], 0, family1, font_size_1);
+						}
+						break;
+
+					case SDLK_MINUS:
+						if (keys->ctrl)
+						{
+							font_size_1--;
+							editor_change_font(buffers[curr_buffer], 0, family1, font_size_1);
+						}
+						break;
 				}
 			}
 			else if (event.type == SDL_KEYUP)
@@ -521,9 +545,9 @@ int main(int argc, char** argv)
 				window_clear(window, colors_rgb->editor_bg); 
 				
 				for (int i = 0; i < buffer_amt; i++)
-					editor_render(editor, window, font, colors_rgb);
+					editor_render(editor, colors_rgb);
 
-				cmd_line_render(cmd_line, font, colors_rgb);
+				cmd_line_render(cmd_line, font_2, colors_rgb);
 			}
 		}
 	}
@@ -535,5 +559,7 @@ int main(int argc, char** argv)
 	cmd_line_destroy(cmd_line);
 	window_destroy(window);
 
+	TTF_Quit();
+	SDL_Quit();
 	return 0;
 }

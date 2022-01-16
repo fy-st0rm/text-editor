@@ -13,6 +13,12 @@ enum Modes
 	COMMAND= 'C'
 };
 
+// Fonts
+static char* family1 = "font/JetBrainsMonoNL-Regular.ttf";
+static char* family2 = "font/JetBrainsMonoNL-Regular.ttf";
+static int font_size_1 = 16;
+static int font_size_2 = 16;
+
 // Replies
 static const char replies[6][100] = {
 	{"S0: File saved sucessfully."},

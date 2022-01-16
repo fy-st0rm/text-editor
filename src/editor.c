@@ -1,10 +1,12 @@
 #include "editor.h"
 
 
-Editor* editor_new(Window* window, TTF_Font* font, char* file_name, bool modifiable)
+Editor* editor_new(Window* window, TTF_Font* font_1, TTF_Font* font_2, char* file_name, bool modifiable)
 {
 	Editor* editor = (Editor*) malloc(sizeof(Editor));
 	editor->window = window;
+	editor->font_1 = font_1;
+	editor->font_2 = font_2;
 
 	strcpy(editor->file_name, file_name);
 	editor->text_buffer = calloc(1, sizeof(char));
@@ -38,7 +40,7 @@ Editor* editor_new(Window* window, TTF_Font* font, char* file_name, bool modifia
 	editor->norm_visual = false;
 	editor->line_visual = false;
 
-	editor_gen_texture(editor, window->renderer, font);
+	editor_gen_texture(editor, window->renderer, font_1);
 	editor_read_file(editor, editor->file_name);
 
 	return editor;
@@ -63,7 +65,13 @@ void editor_resize(Editor* editor)
 
 	editor->editor_texture = sdl_check_ptr(SDL_CreateTexture(editor->window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width , editor->window->height));
 	editor->line_texture = sdl_check_ptr(SDL_CreateTexture(editor->window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->cur_w * 4, editor->window->height));
-	editor->bar_texture = sdl_check_ptr(SDL_CreateTexture(editor->window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width, editor->cur_h));
+
+	SDL_Texture* ch = create_texture(editor->window->renderer, editor->font_2, "A");
+	int w, h;
+	SDL_QueryTexture(ch, NULL, NULL, &w, &h);
+	SDL_DestroyTexture(ch);
+
+	editor->bar_texture = sdl_check_ptr(SDL_CreateTexture(editor->window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width, h));
 }
 
 // Editor file handling
@@ -113,6 +121,30 @@ int editor_write_file(Editor* editor, char* file_name)
 		return 0;
 	}
 	return 1; 
+}
+
+// Font handling
+void editor_change_font(Editor* editor, int type, char* family, int size)
+{
+	if (type == 0)
+	{
+		TTF_CloseFont(editor->font_1);
+		editor->font_1 = sdl_check_ptr(TTF_OpenFont(family, size));
+		editor_update_cursor(editor);
+	}
+	else if (type == 1)
+	{
+		TTF_CloseFont(editor->font_2);
+		editor->font_2 = sdl_check_ptr(TTF_OpenFont(family, size));
+	}
+	editor_resize(editor);
+}
+
+void editor_update_cursor(Editor* editor)
+{
+	SDL_Texture* ch = create_texture(editor->window->renderer, editor->font_1, "A");
+	SDL_QueryTexture(ch, NULL, NULL, &editor->cur_w, &editor->cur_h);
+	SDL_DestroyTexture(ch);
 }
 
 // Editor buffer management
@@ -171,10 +203,15 @@ void editor_set_cur_pos(Editor* editor, int pos)
 void editor_set_cur_back(Editor* editor)
 {
 	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
-	for (int i = pos; i < editor->buffer_len; i++)
+	for (int i = pos; i <= editor->buffer_len; i++)
 	{
 		char ch = editor->text_buffer[i];
 		if (ch == '\n')
+		{
+			editor_set_cur_pos(editor, i);
+			break;
+		}
+		else if (i == editor->buffer_len)
 		{
 			editor_set_cur_pos(editor, i);
 			break;
@@ -322,10 +359,16 @@ void editor_insert(Editor* editor, char chr)
 void editor_insert_nl_bel(Editor* editor)
 {
 	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
-	for (int i = pos; i < editor->buffer_len; i++)
+	for (int i = pos; i <= editor->buffer_len; i++)
 	{
 		char ch = editor->text_buffer[i];
 		if (ch == '\n')
+		{
+			editor_set_cur_pos(editor, i);
+			editor_insert(editor, '\n');
+			break;
+		}
+		else if (i == editor->buffer_len)
 		{
 			editor_set_cur_pos(editor, i);
 			editor_insert(editor, '\n');
@@ -336,7 +379,7 @@ void editor_insert_nl_bel(Editor* editor)
 
 void editor_insert_nl_abv(Editor* editor)
 {
-	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
+	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y) - 1;
 	for (int i = pos; i >= 0; i--) 
 	{
 		char ch = editor->text_buffer[i];
@@ -344,6 +387,13 @@ void editor_insert_nl_abv(Editor* editor)
 		{
 			editor_set_cur_pos(editor, i);
 			editor_insert(editor, '\n');
+			break;
+		}
+		else if (i == 0)
+		{
+			editor_set_cur_pos(editor, i);
+			editor_insert(editor, '\n');
+			editor_set_cur_pos(editor, i);
 			break;
 		}
 	}
@@ -915,10 +965,15 @@ void editor_init_norm_select(Editor* editor)
 void editor_init_line_select(Editor* editor)
 {
 	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
-	for (int i = pos; i < editor->buffer_len; i++)
+	for (int i = pos; i <= editor->buffer_len; i++)
 	{
 		char ch = editor->text_buffer[i];
 		if (ch == '\n')
+		{
+			editor->sel_end = i;
+			break;
+		}
+		else if (i == editor->buffer_len)
 		{
 			editor->sel_end = i;
 			break;
@@ -980,10 +1035,15 @@ void editor_line_select(Editor* editor)
 	}
 	else if (editor->cur_y > editor->sel_init)
 	{
-		for (int i = pos; i < editor->buffer_len; i++)
+		for (int i = pos; i <= editor->buffer_len; i++)
 		{
 			char ch = editor->text_buffer[i];
 			if (ch == '\n')
+			{
+				editor->sel_end = i;
+				break;
+			}
+			else if (i == editor->buffer_len)
 			{
 				editor->sel_end = i;
 				break;
@@ -992,10 +1052,15 @@ void editor_line_select(Editor* editor)
 	}
 	else if (editor->cur_y == editor->sel_init)
 	{
-		for (int i = pos; i < editor->buffer_len; i++)
+		for (int i = pos; i <= editor->buffer_len; i++)
 		{
 			char ch = editor->text_buffer[i];
 			if (ch == '\n')
+			{
+				editor->sel_end = i;
+				break;
+			}
+			else if (i == editor->buffer_len)
 			{
 				editor->sel_end = i;
 				break;
@@ -1229,7 +1294,7 @@ void editor_render_bar(Editor* editor, TTF_Font* font, Colors* colors_rgb)
 	}
 }
 
-void editor_render(Editor* editor, Window* window, TTF_Font* font, Colors* colors_rgb)
+void editor_render(Editor* editor, Colors* colors_rgb)
 {
 	// Calling scrolling functions
 	editor_scroll_left (editor);
@@ -1244,24 +1309,29 @@ void editor_render(Editor* editor, Window* window, TTF_Font* font, Colors* color
 	if (end > total_line) end = total_line + 1;
 
 	// Rendering buffers
-	editor_render_line(editor, start, end, font, colors_rgb);
-	editor_render_buffer(editor, start, end, font, colors_rgb);
-	editor_render_bar(editor, font, colors_rgb);
+	editor_render_line(editor, start, end, editor->font_1, colors_rgb);
+	editor_render_buffer(editor, start, end, editor->font_1, colors_rgb);
+	editor_render_bar(editor, editor->font_2, colors_rgb);
 
 	// Defaulting the render target
-	SDL_SetRenderTarget(window->renderer, NULL);
+	SDL_SetRenderTarget(editor->window->renderer, NULL);
 
 	// Rendering text buffer
-	SDL_Rect texture_rect = { editor->cur_w * 4, 0, window->width, window->height};
-	SDL_RenderCopy(window->renderer, editor->editor_texture, NULL, &texture_rect);
+	SDL_Rect texture_rect = { editor->cur_w * 4, 0, editor->window->width, editor->window->height};
+	SDL_RenderCopy(editor->window->renderer, editor->editor_texture, NULL, &texture_rect);
 
 	// Rendering line buffer
-	SDL_Rect line_rect = { 0, 0, editor->cur_w * 4, window->height};
-	SDL_RenderCopy(window->renderer, editor->line_texture, NULL, &line_rect);
+	SDL_Rect line_rect = { 0, 0, editor->cur_w * 4, editor->window->height};
+	SDL_RenderCopy(editor->window->renderer, editor->line_texture, NULL, &line_rect);
 	
 	// Rendering command line buffer
-	SDL_Rect cmd_line_rect = { 0, editor->window->height - (2 * editor->cur_h), editor->window->width, editor->cur_h };
-	SDL_RenderCopy(window->renderer, editor->bar_texture, NULL, &cmd_line_rect);
+	SDL_Texture* ch = create_texture(editor->window->renderer, editor->font_2, "A");
+	int w, h;
+	SDL_QueryTexture(ch, NULL, NULL, &w, &h);
+	SDL_DestroyTexture(ch);
+
+	SDL_Rect cmd_line_rect = { 0, editor->window->height - (2 * h), editor->window->width, h }; 
+	SDL_RenderCopy(editor->window->renderer, editor->bar_texture, NULL, &cmd_line_rect);
 }
 
 void editor_gen_texture(Editor* editor, SDL_Renderer* renderer, TTF_Font* font)

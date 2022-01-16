@@ -12,7 +12,10 @@ typedef struct
 	char file_name[256];
 	char* text_buffer;
 	int buffer_len;
+
 	Window* window;
+	TTF_Font* font_1;
+	TTF_Font* font_2;
 
 	// Cursor
 	int cur_x, cur_y, cur_rend_x, cur_rend_y, cur_w, cur_h;
@@ -32,13 +35,17 @@ typedef struct
 	SDL_Texture* bar_texture;
 } Editor;
 
-Editor* 		editor_new			(Window* window, TTF_Font* font, char* file_name, bool modifiable);
+Editor* 		editor_new			(Window* window, TTF_Font* font_1, TTF_Font* font_2, char* file_name, bool modifiable);
 void			editor_destroy		(Editor* editor);
 void 			editor_resize		(Editor* editor);
 
 // Editor file handling
 int				editor_read_file	(Editor* editor, char* file_name);
 int				editor_write_file	(Editor* editor, char* file_name);
+
+// Font handling
+void			editor_change_font	(Editor* editor, int type, char* family, int size);
+void			editor_update_cursor(Editor* editor);
 
 // Editor buffer management
 int				editor_get_cur_pos	(Editor* editor, int x, int y);
@@ -95,7 +102,7 @@ void			editor_render_select(Editor* editor, Colors* colors_rgb);
 void			editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Colors* color_rgb);
 void 			editor_render_line	(Editor* editor, int start, int end, TTF_Font* font, Colors* color_rgb);
 void			editor_render_bar	(Editor* editor, TTF_Font* font, Colors* color_rgb);
-void			editor_render		(Editor* editor, Window* window, TTF_Font* font, Colors* colors_rgb);
+void			editor_render		(Editor* editor, Colors* colors_rgb);
 void			editor_gen_texture	(Editor* editor, SDL_Renderer* renderer, TTF_Font* font);
 void			editor_draw_line	(Editor* editor, int x, int y, SDL_Texture* texture, SDL_Color color);
 
