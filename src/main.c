@@ -207,7 +207,7 @@ int main(int argc, char** argv)
 	int curr_buffer = 0;
 	int buffer_amt = 1;
 	Editor** buffers = calloc(buffer_amt * buffer_amt, sizeof(Editor));
-	Editor* editor = editor_new(window, font_1, font_2, file_name, true);
+		Editor* editor = editor_new(window, file_name, true);
 	buffers[0] = editor;
 
 	// Flags
@@ -386,7 +386,7 @@ int main(int argc, char** argv)
 								Editor** new_buffers = calloc(buffer_amt * buffer_amt, sizeof(Editor));
 								memcpy(new_buffers, buffers, sizeof(Editor) * (buffer_amt - 1) * (buffer_amt - 1));
 
-								Editor* new_buffer = editor_new(window, font_1, font_2, "", true);
+								Editor* new_buffer = editor_new(window, "", true);
 								new_buffers[curr_buffer] = new_buffer;
 
 								free(buffers);

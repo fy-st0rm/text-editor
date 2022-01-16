@@ -1,12 +1,12 @@
 #include "editor.h"
 
 
-Editor* editor_new(Window* window, TTF_Font* font_1, TTF_Font* font_2, char* file_name, bool modifiable)
+Editor* editor_new(Window* window, char* file_name, bool modifiable)
 {
 	Editor* editor = (Editor*) malloc(sizeof(Editor));
 	editor->window = window;
-	editor->font_1 = font_1;
-	editor->font_2 = font_2;
+	editor->font_1 = sdl_check_ptr(TTF_OpenFont(family1, font_size_1));
+	editor->font_2 = sdl_check_ptr(TTF_OpenFont(family2, font_size_2));
 
 	strcpy(editor->file_name, file_name);
 	editor->text_buffer = calloc(1, sizeof(char));
@@ -40,7 +40,7 @@ Editor* editor_new(Window* window, TTF_Font* font_1, TTF_Font* font_2, char* fil
 	editor->norm_visual = false;
 	editor->line_visual = false;
 
-	editor_gen_texture(editor, window->renderer, font_1);
+	editor_gen_texture(editor, window->renderer, editor->font_1);
 	editor_read_file(editor, editor->file_name);
 
 	return editor;

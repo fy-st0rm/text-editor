@@ -35,7 +35,7 @@ typedef struct
 	SDL_Texture* bar_texture;
 } Editor;
 
-Editor* 		editor_new			(Window* window, TTF_Font* font_1, TTF_Font* font_2, char* file_name, bool modifiable);
+Editor* 		editor_new			(Window* window, char* file_name, bool modifiable);
 void			editor_destroy		(Editor* editor);
 void 			editor_resize		(Editor* editor);
 
