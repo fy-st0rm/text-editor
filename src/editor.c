@@ -9,7 +9,7 @@ Editor* editor_new(Window* window, char* file_name, bool modifiable)
 	editor->font_2 = sdl_check_ptr(TTF_OpenFont(family2, font_size_2));
 
 	strcpy(editor->file_name, file_name);
-	editor->text_buffer = calloc(1, sizeof(char));
+	editor->text_buffer = calloc(2, sizeof(char));
 	editor->buffer_len= 0;
 
 	// Buffer textures
@@ -91,7 +91,9 @@ int editor_read_file(Editor* editor, char* file_name)
 
 		char ch;
 		while((ch = fgetc(file)) != EOF)
+		{
 			editor_insert(editor, ch);
+		}
 
 		fclose(file);
 		editor->cur_x = editor->cur_y = editor->cur_rend_x = editor->cur_rend_y = 0;
@@ -312,7 +314,7 @@ void editor_get_line(Editor* editor, int line_no, char* out)
 // Insert functions
 void editor_insert(Editor* editor, char chr)
 {
-	char* new_buffer = calloc(editor->buffer_len + 1, sizeof(char));
+	char* new_buffer = calloc(editor->buffer_len + 2, sizeof(char));
 
 	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
 
@@ -331,13 +333,13 @@ void editor_insert(Editor* editor, char chr)
 		strcpy(new_buffer + pos, c);
 		memcpy(new_buffer + pos + 1, editor->text_buffer + pos, editor->buffer_len - pos);
 	}
-
 	free(editor->text_buffer);
 	
 	editor->text_buffer = new_buffer;
 	editor->buffer_len++;
 	editor->cur_x++;
 	editor->cur_rend_x++;
+	strcpy(editor->text_buffer + editor->buffer_len, "\0");
 
 	// When user presses enter
 	if (chr == '\n')
@@ -346,6 +348,8 @@ void editor_insert(Editor* editor, char chr)
 		editor->cur_rend_x = 0;
 		editor->cur_y++;
 		editor->cur_rend_y++;
+
+
 	}
 	// When user presses tab
 	else if (chr == '\t')
@@ -403,6 +407,23 @@ void editor_replace_sel(Editor* editor)
 {
 	editor_delete_sel(editor);
 	editor_paste(editor);
+}
+
+void editor_auto_indent(Editor* editor)
+{
+	// Auto indent
+	int size = editor_line_len(editor, editor->cur_y);
+	char line[size];
+	editor_get_line(editor, editor->cur_y, line);
+
+	for(int i = 0; i < size; i++)
+	{
+		char ch = line[i];
+		if (ch == ' ' || ch == '\t')
+			editor_insert(editor, ch);
+		else
+			break;
+	}
 }
 
 // Delete functions
@@ -520,10 +541,10 @@ void editor_delete_left(Editor* editor)
 	for (int i = pos; i >= 0; i--) 
 	{
 		char ch = editor->text_buffer[i];
-		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n";
+		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n\t";
 		if (strchr(characters, ch) != NULL)
 		{
-			int size = pos - i;
+			int size = pos - i + 1;
 
 			// Deleting the line
 			char* new_buffer = calloc(editor->buffer_len, sizeof(char));
@@ -547,10 +568,10 @@ void editor_delete_right(Editor* editor)
 	for (int i = pos; i < editor->buffer_len; i++)
 	{
 		char ch = editor->text_buffer[i];
-		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n";
+		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n\t";
 		if (strchr(characters, ch) != NULL)
 		{
-			int size = i - pos;
+			int size = i - pos + 1;
 
 			// Deleting the line
 			char* new_buffer = calloc(editor->buffer_len, sizeof(char));
@@ -560,7 +581,6 @@ void editor_delete_right(Editor* editor)
 			editor->text_buffer = new_buffer;
 
 			editor->buffer_len -= size;
-
 			break;
 		}
 	}
@@ -568,16 +588,17 @@ void editor_delete_right(Editor* editor)
 
 void editor_delete_sel(Editor* editor)
 {
-	int size = editor->sel_end - editor->sel_start + 1;
+	editor_set_cur_pos(editor, editor->sel_start);
+
+	int size = editor->sel_end - editor->sel_start;
 	char* new_buffer = calloc(editor->buffer_len, sizeof(char));
-	memcpy(new_buffer, editor->text_buffer, editor->sel_start);
-	strcpy(new_buffer + editor->sel_start, editor->text_buffer + editor->sel_end + 1);
+	memcpy(new_buffer, editor->text_buffer, editor->sel_start + 1);
+	strcpy(new_buffer + editor->sel_start, editor->text_buffer + editor->sel_end);
 	free(editor->text_buffer);
 
 	editor->text_buffer = new_buffer;
 	editor->buffer_len -= size;
-	
-	editor_set_cur_pos(editor, editor->sel_start);
+	if (editor->buffer_len < 0) editor->buffer_len = 0;
 }
 
 // Editor cursor
@@ -747,10 +768,10 @@ void editor_jump_left(Editor* editor)
 	for (int i = pos; i >= 0; i--) 
 	{
 		char ch = editor->text_buffer[i];
-		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n";
+		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n\t";
 		if (strchr(characters, ch) != NULL)
 		{
-			editor_set_cur_pos(editor, i);
+			editor_set_cur_pos(editor, i - 1);
 			break;
 		}
 	}
@@ -762,7 +783,7 @@ void editor_jump_right(Editor* editor)
 	for (int i = pos; i < editor->buffer_len; i++)
 	{
 		char ch = editor->text_buffer[i];
-		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n";
+		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n\t";
 		if (strchr(characters, ch) != NULL)
 		{
 			editor_set_cur_pos(editor, i);
@@ -888,6 +909,18 @@ void editor_jump_down(Editor* editor)
 		}
 	}
 
+}
+
+void editor_jump_top(Editor* editor)
+{
+	editor->cur_x = editor->cur_y = editor->cur_rend_x = editor->cur_rend_y = 0;
+}
+
+void editor_jump_bottom(Editor* editor)
+{
+	int lines = editor_get_line_no(editor);
+	editor->cur_x = editor->cur_rend_x = 0;
+	editor->cur_y = editor->cur_rend_y = lines - 1;
 }
 
 // Editor scrolls
@@ -1174,9 +1207,12 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 				}
 				text[buff_size] = '\0';
 
-				SDL_Texture* texture = create_texture(editor->window->renderer, font, text); 
-				editor_draw_line(editor, -editor->scroll_x, y, texture, colors_rgb->editor_fg);
-				SDL_DestroyTexture(texture);	
+				if (strlen(text) > 0)
+				{
+					SDL_Texture* texture = create_texture(editor->window->renderer, font, text); 
+					editor_draw_line(editor, -editor->scroll_x, y, texture, colors_rgb->editor_fg);
+					SDL_DestroyTexture(texture);	
+				}
 			}
 		}
 	}

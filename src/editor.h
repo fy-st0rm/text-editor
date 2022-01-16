@@ -61,6 +61,7 @@ void			editor_insert		(Editor* editor, char chr);
 void			editor_insert_nl_bel(Editor* editor);
 void			editor_insert_nl_abv(Editor* editor);
 void			editor_replace_sel	(Editor* editor);
+void			editor_auto_indent	(Editor* editor);
 
 // Delete
 void			editor_backspace	(Editor* editor);
@@ -79,6 +80,8 @@ void			editor_jump_left	(Editor* editor);
 void			editor_jump_right	(Editor* editor);
 void			editor_jump_up		(Editor* editor);
 void			editor_jump_down	(Editor* editor);
+void			editor_jump_top		(Editor* editor);
+void			editor_jump_bottom	(Editor* editor);
 
 // Editor scrolls
 void			editor_scroll_left	(Editor* editor);

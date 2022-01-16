@@ -6,7 +6,9 @@
 /*
  * TODO: [ ] Config
  * TODO: [ ] Colors
+ * TODO: [ ] Undo and redo
  * TODO: [ ] Fix the memory leak while resizing the window
+ * TODO: [X] Auto indent
  * TODO: [X] Multiple buffers
  * TODO: [X] Font scaling
  * TODO: [X] Text selection
@@ -34,6 +36,7 @@ typedef struct
 	bool ctrl;
 	bool shift;
 	bool d;
+	bool g;
 } Keys;
 
 Keys* init_keys()
@@ -43,6 +46,7 @@ Keys* init_keys()
 	keys->ctrl = false;
 	keys->shift = false;
 	keys->d = false;
+	keys->g = false;
 }
 
 void arrow_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer, int buffer_amt)
@@ -165,6 +169,20 @@ void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer
 				keys->d = true;
 			}
 			break;
+
+		case SDLK_g:
+			if (keys->shift)
+				editor_jump_bottom(editor);
+			else if (keys->g)
+			{
+				editor_jump_top(editor);
+				keys->g = false;
+			}
+			else if (!keys->g)
+			{
+				keys->g = true;
+			}
+			break;
 	}
 }
 
@@ -257,6 +275,8 @@ int main(int argc, char** argv)
 					{
 						case SDLK_RETURN:
 							editor_insert(buffers[curr_buffer], '\n');
+							if (auto_indent) 
+								editor_auto_indent(buffers[curr_buffer]);
 							break;
 						case SDLK_TAB:
 							editor_insert(buffers[curr_buffer], '\t');
@@ -323,6 +343,8 @@ int main(int argc, char** argv)
 									editor_insert_nl_abv(buffers[curr_buffer]);
 								else
 									editor_insert_nl_bel(buffers[curr_buffer]);
+								if (auto_indent) 
+									editor_auto_indent(buffers[curr_buffer]);
 								window->mode = INSERT;
 								halt = true;
 							}

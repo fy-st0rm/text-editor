@@ -19,6 +19,8 @@ static char* family2 = "font/JetBrainsMonoNL-Regular.ttf";
 static int font_size_1 = 16;
 static int font_size_2 = 16;
 
+static bool auto_indent = true;
+
 // Replies
 static const char replies[8][100] = {
 	{"S0: File saved sucessfully."},
