@@ -4,12 +4,15 @@
 #include "includes.h"
 #include "window.h"
 #include "editor.h"
+#include "settings.h"
+
 
 #define MAX_INPUT 100
 
 typedef struct
 {
 	Window* window;
+	Settings* settings;
 
 	// Textures
 	SDL_Texture* texture;
@@ -23,7 +26,7 @@ typedef struct
 	int scroll_x;
 } Cmd_line;
 
-Cmd_line* 	cmd_line_new			(Window* window, TTF_Font* font);
+Cmd_line* 	cmd_line_new			(Window* window, TTF_Font* font, Settings* settings);
 void		cmd_line_destroy		(Cmd_line* cmd_line);
 void		cmd_line_resize			(Cmd_line* cmd_line);
 

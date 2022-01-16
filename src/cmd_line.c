@@ -1,11 +1,12 @@
 #include "cmd_line.h"
 
 
-Cmd_line* cmd_line_new(Window* window, TTF_Font* font)
+Cmd_line* cmd_line_new(Window* window, TTF_Font* font, Settings* settings)
 {
 	Cmd_line* cmd_line = malloc(sizeof(Cmd_line));
 	
 	cmd_line->window = window;
+	cmd_line->settings = settings;
 
 	// Character buffers
 	cmd_line->input = calloc(MAX_INPUT, sizeof(char));
@@ -262,6 +263,20 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int*
 			int result = cmd_line_save(cmd_line, file_name, buffers, curr_buffer);
 			if (result == 0)
 				cmd_line_quit_with_save(cmd_line, buffers, curr_buffer, buffer_amt);
+		}
+		// Display all the buffers
+		else if (!strcmp(cmds[i], "buffers"))
+		{
+			add_new_buffer(cmd_line->window, cmd_line->settings, buffers, buffer_amt, curr_buffer, "Buffers", false);
+			for (int i = 0; i < *buffer_amt; i++)
+			{
+				char* file_name = buffers[i]->file_name;
+				char index[3];
+				sprintf(index, "%d: ", i);
+				editor_insert_str(buffers[*curr_buffer], index);
+				editor_insert_str(buffers[*curr_buffer], file_name);
+				editor_insert(buffers[*curr_buffer], '\n');
+			}
 		}
 
 		// Error

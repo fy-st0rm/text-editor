@@ -42,6 +42,19 @@ font_1 = Font("font/JetBrainsMonoNL-Regular.ttf", 16)
 font_2 = Font("font/JetBrainsMonoNL-Regular.ttf", 16)
 
 
+# Buffer
+class Buffer:
+	def __init__(self, file_name, modifiable):
+		self.file_name = file_name
+		self.modifiable = modifiable
+
+buffers = []
+
+# default buffer
+default_buffer = Buffer("\"\"", True)
+buffers.append(default_buffer)
+
+
 def generate_config():
 	if not os.path.exists(os.path.join("out")):
 		os.mkdir("out")
@@ -74,6 +87,9 @@ def generate_config():
 	src += f"COMMAND_MD {colors.command_md}\n"
 	src += f"CURSOR {colors.cursor}\n"
 	src += f"SELECTION {colors.selection}\n"
+
+	for i in buffers:
+		src += f"BUFFER_NEW {i.file_name} {i.modifiable}\n"
 	
 	# Writing it to the file
 	file.write(src)

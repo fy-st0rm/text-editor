@@ -1,7 +1,18 @@
 #ifndef _WINDOW_H_
 #define _WINDOW_H_
 
+
+#include "includes.h"
 #include "globals.h"
+
+// Editor modes
+enum Modes
+{
+	NORMAL = 'N',
+	INSERT = 'I',
+	VISUAL = 'V',
+	COMMAND= 'C'
+};
 
 typedef struct 
 {

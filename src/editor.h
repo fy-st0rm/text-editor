@@ -1,7 +1,6 @@
 #ifndef _EDITOR_H_
 #define _EDITOR_H_
 
-#include "globals.h"
 #include "window.h"
 
 #define TAB_SIZE 	4
@@ -58,6 +57,7 @@ int				editor_line_len		(Editor* editor, int line_no);
 
 // Insert
 void			editor_insert		(Editor* editor, char chr);
+void			editor_insert_str	(Editor* editor, char* text);
 void			editor_insert_nl_bel(Editor* editor);
 void			editor_insert_nl_abv(Editor* editor);
 void			editor_replace_sel	(Editor* editor);

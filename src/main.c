@@ -1,10 +1,11 @@
 #include "globals.h"
+#include "settings.h"
 #include "editor.h"
 #include "window.h"
 #include "cmd_line.h"
 
 /*
- * TODO: [ ] Config
+ * TODO: [ ] Config interpretor
  * TODO: [ ] Colors
  * TODO: [ ] Undo and redo
  * TODO: [ ] Fix the memory leak while resizing the window
@@ -94,7 +95,7 @@ void arrow_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffe
 	}
 }
 
-void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer, int buffer_amt)
+void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer, int buffer_amt, Cmd_line* cmd_line)
 {
 	switch (event.key.keysym.sym)
 	{
@@ -136,7 +137,19 @@ void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer
 				editor_jump_right(editor);
 			else if (keys->d)
 			{
-				editor_delete_right(editor);
+				if (editor->modifiable)
+				{
+					editor_delete_right(editor);
+				}
+				else
+				{
+					cmd_line_clear_input(cmd_line);
+					char* reply = replies[5];
+					for (int i = 0; i < strlen(reply); i++)
+					{
+						cmd_line_insert(cmd_line, reply[i]);
+					}
+				}
 				keys->d = false;
 			}
 			break;
@@ -146,7 +159,19 @@ void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer
 				editor_jump_left(editor);
 			else if (keys->d)
 			{
-				editor_delete_left(editor);
+				if (editor->modifiable) 
+				{
+					editor_delete_left(editor);
+				}
+				else
+				{
+					cmd_line_clear_input(cmd_line);
+					char* reply = replies[5];
+					for (int i = 0; i < strlen(reply); i++)
+					{
+						cmd_line_insert(cmd_line, reply[i]);
+					}
+				}
 				keys->d = false;
 			}
 			break;
@@ -161,7 +186,19 @@ void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer
 				editor_jump_down(editor);
 			else if (keys->d)
 			{
-				editor_delete_line(editor);
+				if (editor->modifiable)
+				{
+					editor_delete_line(editor);
+				}
+				else
+				{
+					cmd_line_clear_input(cmd_line);
+					char* reply = replies[5];
+					for (int i = 0; i < strlen(reply); i++)
+					{
+						cmd_line_insert(cmd_line, reply[i]);
+					}
+				}
 				keys->d = false;
 			}
 			else if (!keys->d)
@@ -195,9 +232,15 @@ int main(int argc, char** argv)
 
 	// Creating window
 	Window* window = window_new("Text Editor", 800, 600);
+
+	// List of buffers
+	int curr_buffer = -1;
+	int buffer_amt = 0;
+	Editor** buffers = calloc(buffer_amt * buffer_amt, sizeof(Editor));
 	
+	// Generating settings
 	Colors* colors_rgb = malloc(sizeof(Colors)); 
-	Settings* settings = init_settings(colors_rgb);
+	Settings* settings = init_settings(colors_rgb, window,  buffers, &buffer_amt, &curr_buffer);
 
 	// Loading font
 	TTF_Font* font_1 = sdl_check_ptr(TTF_OpenFont(settings->family1, settings->font_size_1));
@@ -209,25 +252,24 @@ int main(int argc, char** argv)
 	strcpy(file_name, "");
 
 	if (argc > 1)
+	{
 		strcpy(file_name, argv[1]);
+		add_new_buffer(window, settings, buffers, &buffer_amt, &curr_buffer, file_name, true);
+	}
 	
 	// Keys for keybindings
 	Keys* keys = init_keys();
 
-	// List of buffers
-	int curr_buffer = 0;
-	int buffer_amt = 1;
-	Editor** buffers = calloc(buffer_amt * buffer_amt, sizeof(Editor));
-	Editor* editor = editor_new(window, settings, file_name, true);
-	buffers[0] = editor;
-
 	// Creating cmdline
-	Cmd_line* cmd_line = cmd_line_new(window, font_2);
+	Cmd_line* cmd_line = cmd_line_new(window, font_2, settings);
 
 	// Flags
 	bool loop = true;
 	bool halt = false;
 	SDL_Event event;
+
+	if (buffer_amt > 0)
+		halt = true;
 
 	while (loop)
 	{
@@ -398,17 +440,7 @@ int main(int argc, char** argv)
 						case SDLK_n:
 							if (keys->ctrl)
 							{
-								buffer_amt++;
-								curr_buffer++;
-
-								Editor** new_buffers = calloc(buffer_amt * buffer_amt, sizeof(Editor));
-								memcpy(new_buffers, buffers, sizeof(Editor) * (buffer_amt - 1) * (buffer_amt - 1));
-
-								Editor* new_buffer = editor_new(window, settings, "", true);
-								new_buffers[curr_buffer] = new_buffer;
-
-								free(buffers);
-								buffers = new_buffers;
+								add_new_buffer(window, settings, buffers, &buffer_amt, &curr_buffer, "", true);
 
 								// Writing the msg in cmdline
 								cmd_line_clear_input(cmd_line);
@@ -459,7 +491,7 @@ int main(int argc, char** argv)
 							}
 							break;
 					}
-					hjkl_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt);
+					hjkl_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt, cmd_line);
 					arrow_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt);
 				}
 				// VISUAL MODE SPECIFIC
@@ -517,7 +549,7 @@ int main(int argc, char** argv)
 							window->mode = NORMAL;
 							break;
 					}
-					hjkl_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt);
+					hjkl_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt, cmd_line);
 					arrow_movement(buffers[curr_buffer], event, keys, &curr_buffer, buffer_amt);
 				}
 				// COMMAND MODE SPECIFIC
@@ -605,8 +637,16 @@ int main(int argc, char** argv)
 				{
 					case SDL_WINDOWEVENT_RESIZED:
 						SDL_GetWindowSize(window->window, &window->width, &window->height);
-						editor_resize(buffers[curr_buffer]);
 						cmd_line_resize(cmd_line);
+
+						if (!halt)
+							editor_resize(buffers[curr_buffer]);
+						else
+						{
+							for (int i = 0 ; i < buffer_amt; i++)
+								editor_resize(buffers[i]);
+							halt = false;
+						}
 						break;
 				}
 			}
@@ -627,9 +667,9 @@ int main(int argc, char** argv)
 	// Freeing up the memory
 	free(keys);
 	free(buffers);
-
 	free(colors_rgb);
 	free_settings(settings);
+
 	cmd_line_destroy(cmd_line);
 	window_destroy(window);
 

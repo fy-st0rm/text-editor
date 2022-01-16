@@ -360,6 +360,17 @@ void editor_insert(Editor* editor, char chr)
 	editor->edited = true;
 }
 
+void editor_insert_str(Editor* editor, char* text)
+{
+	char str[strlen(text)];
+	strcpy(str, text);
+
+	for (int i = 0; i < strlen(str); i++)
+	{
+		editor_insert(editor, text[i]);
+	}
+}
+
 void editor_insert_nl_bel(Editor* editor)
 {
 	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
