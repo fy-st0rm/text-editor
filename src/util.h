@@ -48,4 +48,15 @@ static void draw_text(SDL_Renderer* renderer, int x, int y, SDL_Texture* texture
 	SDL_RenderCopy(renderer, texture, NULL, &rect);
 }
 
+static SDL_Color hex_to_rgb(char* hex_value)
+{
+	SDL_Color color;
+	int r, g, b;
+	sscanf(hex_value, "%02x%02x%02x", &r, &g, &b);
+	color.r = r;
+	color.g = g;
+	color.b = b;
+	return color;
+}
+
 #endif

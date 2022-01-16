@@ -12,7 +12,7 @@
  * TODO: [X] Multiple buffers
  * TODO: [X] Font scaling
  * TODO: [X] Text selection
- * TODO: [X] Vim like modes ([X]NORMAL, [X]INSERT, [X]COMMAND, [ ]VISUAL)
+ * TODO: [X] Vim like modes ([X]NORMAL, [X]INSERT, [X]COMMAND, [X]VISUAL)
  * TODO: [X] Cut, delete selected, replace selected
  * TODO: [X] Clipboard handling
  * TODO: [X] Command line
@@ -186,29 +186,22 @@ void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer
 	}
 }
 
-// Font creation
-TTF_Font* create_font(char* font_path, int font_size)
-{
-	TTF_Font* font = sdl_check_ptr(TTF_OpenFont(font_path, font_size));
-	return font;
-}
-
 int main(int argc, char** argv)
 {
 	sdl_check(SDL_Init(SDL_INIT_VIDEO));
 	sdl_check(TTF_Init());
 
 	atexit(report_mem_leak);
+
+	// Creating window
+	Window* window = window_new("Text Editor", 800, 600);
 	
-	init_colors();
+	Colors* colors_rgb = malloc(sizeof(Colors)); 
+	Settings* settings = init_settings(colors_rgb);
 
 	// Loading font
-	TTF_Font* font_1 = create_font(family1, font_size_1);
-	TTF_Font* font_2 = create_font(family2, font_size_2);
-
-	// Creating window and cmd line
-	Window* window = window_new("Text Editor", 800, 600);
-	Cmd_line* cmd_line = cmd_line_new(window, font_1);
+	TTF_Font* font_1 = sdl_check_ptr(TTF_OpenFont(settings->family1, settings->font_size_1));
+	TTF_Font* font_2 = sdl_check_ptr(TTF_OpenFont(settings->family2, settings->font_size_2));
 
 	// Reading the cmd line arguments
 	char file_name[256];
@@ -225,8 +218,11 @@ int main(int argc, char** argv)
 	int curr_buffer = 0;
 	int buffer_amt = 1;
 	Editor** buffers = calloc(buffer_amt * buffer_amt, sizeof(Editor));
-		Editor* editor = editor_new(window, file_name, true);
+	Editor* editor = editor_new(window, settings, file_name, true);
 	buffers[0] = editor;
+
+	// Creating cmdline
+	Cmd_line* cmd_line = cmd_line_new(window, font_2);
 
 	// Flags
 	bool loop = true;
@@ -275,7 +271,7 @@ int main(int argc, char** argv)
 					{
 						case SDLK_RETURN:
 							editor_insert(buffers[curr_buffer], '\n');
-							if (auto_indent) 
+							if (settings->auto_indent) 
 								editor_auto_indent(buffers[curr_buffer]);
 							break;
 						case SDLK_TAB:
@@ -343,7 +339,7 @@ int main(int argc, char** argv)
 									editor_insert_nl_abv(buffers[curr_buffer]);
 								else
 									editor_insert_nl_bel(buffers[curr_buffer]);
-								if (auto_indent) 
+								if (settings->auto_indent) 
 									editor_auto_indent(buffers[curr_buffer]);
 								window->mode = INSERT;
 								halt = true;
@@ -408,7 +404,7 @@ int main(int argc, char** argv)
 								Editor** new_buffers = calloc(buffer_amt * buffer_amt, sizeof(Editor));
 								memcpy(new_buffers, buffers, sizeof(Editor) * (buffer_amt - 1) * (buffer_amt - 1));
 
-								Editor* new_buffer = editor_new(window, "", true);
+								Editor* new_buffer = editor_new(window, settings, "", true);
 								new_buffers[curr_buffer] = new_buffer;
 
 								free(buffers);
@@ -573,16 +569,16 @@ int main(int argc, char** argv)
 					case SDLK_EQUALS:
 						if (keys->ctrl)
 						{
-							font_size_1++;
-							editor_change_font(buffers[curr_buffer], 0, family1, font_size_1);
+							settings->font_size_1++;
+							editor_change_font(buffers[curr_buffer], 0, settings->family1, settings->font_size_1);
 						}
 						break;
 
 					case SDLK_MINUS:
 						if (keys->ctrl)
 						{
-							font_size_1--;
-							editor_change_font(buffers[curr_buffer], 0, family1, font_size_1);
+							settings->font_size_1--;
+							editor_change_font(buffers[curr_buffer], 0, settings->family1, settings->font_size_1);
 						}
 						break;
 				}
@@ -628,10 +624,12 @@ int main(int argc, char** argv)
 		}
 	}
 
+	// Freeing up the memory
 	free(keys);
 	free(buffers);
 
-	free_colors();
+	free(colors_rgb);
+	free_settings(settings);
 	cmd_line_destroy(cmd_line);
 	window_destroy(window);
 

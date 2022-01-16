@@ -263,6 +263,17 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int*
 			if (result == 0)
 				cmd_line_quit_with_save(cmd_line, buffers, curr_buffer, buffer_amt);
 		}
+
+		// Error
+		else
+		{
+			char* reply = replies[8];
+			cmd_line_clear_input(cmd_line);
+			for (int i = 0; i < strlen(reply); i++)
+			{
+				cmd_line_insert(cmd_line, reply[i]);
+			}
+		}
 	}
 }
 

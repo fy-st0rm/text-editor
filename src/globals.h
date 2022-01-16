@@ -13,16 +13,8 @@ enum Modes
 	COMMAND= 'C'
 };
 
-// Fonts
-static char* family1 = "font/JetBrainsMonoNL-Regular.ttf";
-static char* family2 = "font/JetBrainsMonoNL-Regular.ttf";
-static int font_size_1 = 16;
-static int font_size_2 = 16;
-
-static bool auto_indent = true;
-
 // Replies
-static const char replies[8][100] = {
+static const char replies[9][100] = {
 	{"S0: File saved sucessfully."},
 	{"E1: No file name."},
 	{"E2: Failed to open file."},
@@ -30,8 +22,21 @@ static const char replies[8][100] = {
 	{"E3: File is not saved. (add ! to exit without saving)"},
 	{"E4: Buffer is not modifiable."},
 	{"S2: Created new buffer."},
-	{"S3: Sucessfully destroyed the buffer."}
+	{"S3: Sucessfully destroyed the buffer."},
+	{"E5: Invalid command."}
 };
+
+// Settings
+typedef struct
+{
+	// Fonts
+	char family1[256];
+	char family2[256];
+	int font_size_1;
+	int font_size_2;
+
+	bool auto_indent;
+} Settings;
 
 // Colors
 typedef struct 
@@ -44,7 +49,7 @@ typedef struct
 	// Foreground
 	SDL_Color editor_fg;
 	SDL_Color line_fg;
-	SDL_Color sel_line_fg;
+	SDL_Color cur_line_fg;
 	SDL_Color bar_fg;
 
 	// Mode colors
@@ -58,55 +63,139 @@ typedef struct
 	SDL_Color selection;
 } Colors;
 
-static Colors* colors_rgb;
 
-static void init_colors()
+static Settings* init_settings(Colors* colors_rgb)
 {
-	colors_rgb = malloc(sizeof(Colors));
-
-	// Background
-	SDL_Color editor_bg = {  40,  40,  40 };
-	SDL_Color line_bg   = {  40,  40,  40 };
-	SDL_Color bar_bg    = {  60,  56,  54 };
-
-	// Foreground
-	SDL_Color editor_fg   = { 251, 241, 199 };
-	SDL_Color line_fg  	  = { 251, 241, 199 }; 
-	SDL_Color sel_line_fg = { 254, 128,  25 };
-	SDL_Color bar_fg      = { 251, 241, 199 };	
-
-	// Mode colors
-	SDL_Color normal_md  = { 184, 187,  38 };
-	SDL_Color insert_md  = { 131, 165, 152 };
-	SDL_Color visual_md  = { 254, 128,  25 };
-	SDL_Color command_md = { 184, 187,  38 };
+	Settings* settings = malloc(sizeof(Settings));
 	
-	// Cursor
-	SDL_Color cursor    = { 235, 219, 178 };
-	SDL_Color selection = { 146, 131, 116 };
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
 
-	colors_rgb->editor_bg = editor_bg;
-	colors_rgb->editor_fg = editor_fg;
+	// Reading the config file
+    FILE* fp = fopen("config/out/config", "r");
+    if (fp == NULL)
+	{
+		fprintf(stderr, "Failed to read config file.");
+		exit(1);
+	}
 
-   	colors_rgb->line_bg	= line_bg;
-	colors_rgb->line_fg = line_fg;
-	colors_rgb->sel_line_fg = sel_line_fg;
-
-	colors_rgb->bar_bg = bar_bg;
-	colors_rgb->bar_fg = bar_fg;
+	// Reading line by line
+    while ((read = getline(&line, &len, fp)) != -1) {
+		char* token = strtok(line, " ");
 	
-	colors_rgb->normal_md = normal_md;
-	colors_rgb->insert_md = insert_md;
-	colors_rgb->visual_md = visual_md;
-	colors_rgb->command_md = command_md;
+		// Interpreting the lines
+		if (!strcmp(token, "FAMILY1"))
+		{
+			char* value = strtok(NULL, "\n");
+			strcpy(settings->family1, value);
+		}
+		else if (!strcmp(token, "FAMILY2"))
+		{
+			char* value = strtok(NULL, "\n");
+			strcpy(settings->family2, value);
+		}
+		else if (!strcmp(token, "FONT_SIZE_1"))
+		{
+			char* value = strtok(NULL, "\n");
+			settings->font_size_1 = atoi(value);
+		}
+		else if (!strcmp(token, "FONT_SIZE_2"))
+		{
+			char* value = strtok(NULL, "\n");
+			settings->font_size_2 = atoi(value);
+		}
+		else if (!strcmp(token, "AUTO_INDENT"))
+		{
+			char* value = strtok(NULL, "\n");
+			if (!strcmp(value, "True"))
+				settings->auto_indent = true;
+			else if (!strcmp(value, "False"))
+				settings->auto_indent = false;
+			else
+			{
+				fprintf(stderr, "Incorrect value for auto indent: %s\n", value);
+				exit(1);
+			}
+		}
+		// Extracting colors
+		else if (!strcmp(token, "EDITOR_BG"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->editor_bg = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "LINE_BG"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->line_bg = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "BAR_BG"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->bar_bg = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "EDITOR_FG"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->editor_fg = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "LINE_FG"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->line_fg = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "BAR_FG"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->bar_fg = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "CUR_LINE_FG"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->cur_line_fg = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "NORMAL_MD"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->normal_md = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "INSERT_MD"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->insert_md = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "VISUAL_MD"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->visual_md = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "COMMAND_MD"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->command_md = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "CURSOR"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->cursor = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "SELECTION"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->selection = hex_to_rgb(value);
+		}
+    }
 
-	colors_rgb->cursor = cursor;
-	colors_rgb->selection = selection;
+    fclose(fp);
+    if (line)
+        free(line);
+
+	return settings;
 }
 
-static void free_colors()
+static void free_settings(Settings* settings)
 {
-	free(colors_rgb);
+	free(settings);
 }
 
 

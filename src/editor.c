@@ -1,12 +1,12 @@
 #include "editor.h"
 
 
-Editor* editor_new(Window* window, char* file_name, bool modifiable)
+Editor* editor_new(Window* window, Settings* settings, char* file_name, bool modifiable)
 {
 	Editor* editor = (Editor*) malloc(sizeof(Editor));
 	editor->window = window;
-	editor->font_1 = sdl_check_ptr(TTF_OpenFont(family1, font_size_1));
-	editor->font_2 = sdl_check_ptr(TTF_OpenFont(family2, font_size_2));
+	editor->font_1 = sdl_check_ptr(TTF_OpenFont(settings->family1, settings->font_size_1));
+	editor->font_2 = sdl_check_ptr(TTF_OpenFont(settings->family2, settings->font_size_2));
 
 	strcpy(editor->file_name, file_name);
 	editor->text_buffer = calloc(2, sizeof(char));
@@ -1253,7 +1253,7 @@ void editor_render_line(Editor* editor, int start, int end, TTF_Font* font, Colo
 
 		// Changing color if the line has the cursor
 		if (i - 1 == editor->cur_rend_y)
-			draw_text(editor->window->renderer, 0, i - 1 - editor->scroll_y, texture, colors_rgb->sel_line_fg);
+			draw_text(editor->window->renderer, 0, i - 1 - editor->scroll_y, texture, colors_rgb->cur_line_fg);
 		else
 			draw_text(editor->window->renderer, 0, i - 1 - editor->scroll_y, texture, colors_rgb->line_fg);
 
@@ -1379,7 +1379,13 @@ void editor_gen_texture(Editor* editor, SDL_Renderer* renderer, TTF_Font* font)
 	// Generating textures for the buffers
 	editor->editor_texture = sdl_check_ptr(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width , editor->window->height));
 	editor->line_texture = sdl_check_ptr(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->cur_w * 4, editor->window->height));
-	editor->bar_texture = sdl_check_ptr(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width, editor->cur_h));
+
+	ch = create_texture(editor->window->renderer, editor->font_2, "A");
+	int w, h;
+	SDL_QueryTexture(ch, NULL, NULL, &w, &h);
+	SDL_DestroyTexture(ch);
+
+	editor->bar_texture = sdl_check_ptr(SDL_CreateTexture(editor->window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width, h));
 }
 
 void editor_draw_line(Editor* editor, int x, int y, SDL_Texture* texture, SDL_Color color)
