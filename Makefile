@@ -14,9 +14,9 @@ build:
 
 install:
 	$(MAKE) build
-	sudo mv $(OUT) /usr/bin/
 	cp -r $(CONF) ~/.config/
+	mv $(OUT) /usr/bin/
 
 uninstall:
-	sudo rm /usr/bin/$(OUT)
+	rm /usr/bin/$(OUT)
 	rm -r ~/.config/$(CONF)
