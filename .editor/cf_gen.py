@@ -65,7 +65,7 @@ class Buffer:
 buffers = []
 
 # default buffer
-default_buffer = Buffer("\"\"", True)
+default_buffer = Buffer("**buffers**", True)
 buffers.append(default_buffer)
 
 

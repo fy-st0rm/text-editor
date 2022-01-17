@@ -267,18 +267,7 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int*
 		// Display all the buffers
 		else if (!strcmp(cmds[i], "buffers"))
 		{
-			add_new_buffer(cmd_line->window, cmd_line->settings, buffers, buffer_amt, curr_buffer, "Buffers", false);
-			editor_insert_str(buffers[*curr_buffer], "# These are the currently opened buffers. \n");
-			for (int i = 0; i < *buffer_amt; i++)
-			{
-				char* file_name = buffers[i]->file_name;
-				char index[3];
-				sprintf(index, "%d: ", i);
-				editor_insert_str(buffers[*curr_buffer], index);
-				editor_insert_str(buffers[*curr_buffer], file_name);
-				editor_insert(buffers[*curr_buffer], '\n');
-			}
-			buffers[*curr_buffer]->edited = false;
+			add_new_buffer(cmd_line->window, cmd_line->settings, buffers, buffer_amt, curr_buffer, "**buffers**", false);
 		}
 		// To create a terminal
 		else if (cmds[i][0] == '!')
@@ -286,7 +275,7 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int*
 			bool term = false;
 			for (int i = 0; i < *buffer_amt; i++)
 			{
-				if (!strcmp(buffers[i]->file_name, "Terminal"))
+				if (!strcmp(buffers[i]->file_name, "**terminal**"))
 				{
 					*curr_buffer = i;
 					term = true;
@@ -295,7 +284,7 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int*
 				term = false;
 			}
 			if (!term)
-				add_new_buffer(cmd_line->window, cmd_line->settings, buffers, buffer_amt, curr_buffer, "Terminal", false);
+				add_new_buffer(cmd_line->window, cmd_line->settings, buffers, buffer_amt, curr_buffer, "**terminal**", false);
 			
 			buffers[*curr_buffer]->syntax_on = false;
 			editor_jump_bottom(buffers[*curr_buffer]);
