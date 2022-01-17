@@ -119,5 +119,7 @@ def generate_config():
 	# Writing it to the file
 	file.write(src)
 	
+	print("Config has been generated..")
+	
 if __name__ == "__main__":
 	generate_config()
