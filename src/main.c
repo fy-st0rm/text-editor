@@ -5,10 +5,13 @@
 #include "cmd_line.h"
 
 /*
+ * TODO: [ ] Syntax highlighting
  * TODO: [ ] Config interpretor
- * TODO: [ ] Colors
+ * TODO: [ ] Optimize the editor (it counts through all the text in buffer when calculating cur pos)
  * TODO: [ ] Undo and redo
  * TODO: [ ] Fix the memory leak while resizing the window
+ * TODO: [X] Simple terminal
+ * TODO: [X] Colors
  * TODO: [X] Auto indent
  * TODO: [X] Multiple buffers
  * TODO: [X] Font scaling

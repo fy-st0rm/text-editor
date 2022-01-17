@@ -31,10 +31,17 @@ static Settings* init_settings(Colors* colors_rgb, Window* window, Editor** buff
     ssize_t read;
 
 	// Reading the config file
-    FILE* fp = fopen("config/out/config", "r");
+	struct passwd *passwdEnt = getpwuid(getuid());
+	char *home = passwdEnt->pw_dir;
+	char cf_path[] = "/.config/.editor/out/config\0";
+	char full_path[strlen(home) + strlen(cf_path)];
+	strcpy(full_path, home);
+	strcat(full_path, cf_path);
+
+    FILE* fp = fopen(full_path, "r");
     if (fp == NULL)
 	{
-		fprintf(stderr, "Failed to read config file.");
+		fprintf(stderr, "Failed to read config file.\n");
 		exit(1);
 	}
 

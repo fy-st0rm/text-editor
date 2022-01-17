@@ -930,8 +930,9 @@ void editor_jump_top(Editor* editor)
 void editor_jump_bottom(Editor* editor)
 {
 	int lines = editor_get_line_no(editor);
-	editor->cur_x = editor->cur_rend_x = 0;
+	int size = editor_line_len(editor, lines);
 	editor->cur_y = editor->cur_rend_y = lines - 1;
+	editor->cur_x = editor->cur_rend_x = size;
 }
 
 // Editor scrolls

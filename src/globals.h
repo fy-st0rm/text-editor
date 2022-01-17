@@ -4,6 +4,8 @@
 #include "includes.h"
 #include "util.h"
 
+// Datatypes
+static const char c_data_types[] = "int float char short long double signed unsigned size_t uint8_t uint16_t uint32_t";
 
 // Replies
 static const char replies[9][100] = {

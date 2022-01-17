@@ -32,14 +32,23 @@ class Colors:
 colors = Colors()
 
 
+class Syntax:
+	def __init__(self):
+		self.comment = ""
+		self.types   = ""
+		self.strings = ""
+		self.keywords= ""
+
+
 # Font settings
 class Font:
 	def __init__(self, family, size):
 		self.family = family
 		self.size = size
 
-font_1 = Font("font/JetBrainsMonoNL-Regular.ttf", 16)
-font_2 = Font("font/JetBrainsMonoNL-Regular.ttf", 16)
+home = os.environ["HOME"]
+font_1 = Font(f"{home}/.config/.editor/font/JetBrainsMonoNL-Regular.ttf", 16)
+font_2 = Font(f"{home}/.config/.editor/font/JetBrainsMonoNL-Regular.ttf", 16)
 
 
 # Buffer

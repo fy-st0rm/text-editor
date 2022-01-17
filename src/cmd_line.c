@@ -268,6 +268,7 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int*
 		else if (!strcmp(cmds[i], "buffers"))
 		{
 			add_new_buffer(cmd_line->window, cmd_line->settings, buffers, buffer_amt, curr_buffer, "Buffers", false);
+			editor_insert_str(buffers[*curr_buffer], "# These are the currently opened buffers. \n");
 			for (int i = 0; i < *buffer_amt; i++)
 			{
 				char* file_name = buffers[i]->file_name;
@@ -277,6 +278,48 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int*
 				editor_insert_str(buffers[*curr_buffer], file_name);
 				editor_insert(buffers[*curr_buffer], '\n');
 			}
+			buffers[*curr_buffer]->edited = false;
+		}
+		// To create a terminal
+		else if (cmds[i][0] == '!')
+		{
+			bool term = false;
+			for (int i = 0; i < *buffer_amt; i++)
+			{
+				if (!strcmp(buffers[i]->file_name, "Terminal"))
+				{
+					*curr_buffer = i;
+					term = true;
+					break;
+				}
+				term = false;
+			}
+			if (!term)
+				add_new_buffer(cmd_line->window, cmd_line->settings, buffers, buffer_amt, curr_buffer, "Terminal", false);
+			
+			editor_jump_bottom(buffers[*curr_buffer]);
+			// Reading from stdout	
+			FILE *fp;
+			char output[1048];
+
+			// Open the command for reading. 
+			char new_cmd[len + 5];
+			char code[] = " 2>&1\0";
+			strcpy(new_cmd, cmd_line->input + 1);
+			strcat(new_cmd, code);
+
+			fp = popen(new_cmd, "r");
+			if (fp == NULL) {
+				printf("Failed to run command\n" );
+				exit;
+			}
+
+			// Read the output a line at a time
+			while (fgets(output, sizeof(output), fp) != NULL)
+			{
+				editor_insert_str(buffers[*curr_buffer], output);
+			}
+			buffers[*curr_buffer]->edited = false;
 		}
 
 		// Error

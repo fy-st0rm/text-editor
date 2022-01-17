@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include <time.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
