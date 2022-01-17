@@ -34,6 +34,7 @@ static void add_new_buffer(Window* window, Settings* settings, Editor** buffers,
 			editor_insert(buffers[*curr_buffer], '\n');
 		}
 		buffers[*curr_buffer]->edited = false;
+		buffers[*curr_buffer]->modifiable = false;
 	}
 
 	free(new_buffers);
