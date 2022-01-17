@@ -14,7 +14,7 @@ class Colors:
 
 		# Foregrounds
 		self.editor_fg  = "fbf1c7"
-		self.line_fg    = "fbf1c7"
+		self.line_fg    = "928374"
 		self.bar_fg     = "fbf1c7"
 		self.cur_line_fg= "fe8019"
 
@@ -29,15 +29,20 @@ class Colors:
 		self.selection  = "928374"
 
 
-colors = Colors()
-
-
 class Syntax:
 	def __init__(self):
-		self.comment = ""
-		self.types   = ""
-		self.strings = ""
-		self.keywords= ""
+		self.comment  = "928374"
+		self.types    = "fabd2f"
+		self.string   = "b8bb26"
+		self.keywords = "fb4934"
+		self.functions= "98971a"
+		self.symbols  = "689d6a"
+		self.constants= "d3869b"
+
+
+colors = Colors()
+syntax_on = True
+syntax = Syntax()
 
 
 # Font settings
@@ -97,6 +102,17 @@ def generate_config():
 	src += f"CURSOR {colors.cursor}\n"
 	src += f"SELECTION {colors.selection}\n"
 
+	# Appending syntax color values
+	src += f"SYNTAX_ON {syntax_on}\n"
+	src += f"COMMENT {syntax.comment}\n"
+	src += f"TYPES {syntax.types}\n"
+	src += f"STRING {syntax.string}\n"
+	src += f"KEYWORDS {syntax.keywords}\n"
+	src += f"FUNCTIONS {syntax.functions}\n"
+	src += f"SYMBOLS {syntax.symbols}\n"
+	src += f"CONSTANTS {syntax.constants}\n"
+
+	# Adding the buffers
 	for i in buffers:
 		src += f"BUFFER_NEW {i.file_name} {i.modifiable}\n"
 	

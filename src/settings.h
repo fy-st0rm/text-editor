@@ -38,6 +38,8 @@ static Settings* init_settings(Colors* colors_rgb, Window* window, Editor** buff
 	strcpy(full_path, home);
 	strcat(full_path, cf_path);
 
+	char temp[] = ".editor/out/config";
+
     FILE* fp = fopen(full_path, "r");
     if (fp == NULL)
 	{
@@ -80,6 +82,19 @@ static Settings* init_settings(Colors* colors_rgb, Window* window, Editor** buff
 			else
 			{
 				fprintf(stderr, "Incorrect value for auto indent: %s\n", value);
+				exit(1);
+			}
+		}
+		else if (!strcmp(token, "SYNTAX_ON"))
+		{
+			char* value = strtok(NULL, "\n");
+			if (!strcmp(value, "True"))
+				settings->syntax_on = true;
+			else if (!strcmp(value, "False"))
+				settings->syntax_on = false;
+			else
+			{
+				fprintf(stderr, "Incorrect value for syntax on: %s\n", value);
 				exit(1);
 			}
 		}
@@ -148,6 +163,43 @@ static Settings* init_settings(Colors* colors_rgb, Window* window, Editor** buff
 		{
 			char* value = strtok(NULL, "\n");
 			colors_rgb->selection = hex_to_rgb(value);
+		}
+
+		// Extracting syntax colors
+		else if (!strcmp(token, "COMMENT"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->comment = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "TYPES"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->types = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "STRING"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->string = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "KEYWORDS"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->keywords = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "FUNCTIONS"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->functions = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "SYMBOLS"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->symbols = hex_to_rgb(value);
+		}
+		else if (!strcmp(token, "CONSTANTS"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->constants = hex_to_rgb(value);
 		}
 
 		// Interpreting about buffers

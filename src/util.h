@@ -59,4 +59,24 @@ static SDL_Color hex_to_rgb(char* hex_value)
 	return color;
 }
 
+static bool is_upper(char* str)
+{
+	for (int i = 0; i < strlen(str); i++)
+	{
+		if (!isupper(str[i]))
+			return false;
+	}
+	return true;
+}
+
+static bool is_no(char* str)
+{
+	for (int i = 0; i < strlen(str); i++)
+	{
+		if (!isdigit(str[i]))
+			return false;
+	}
+	return true;
+}
+
 #endif

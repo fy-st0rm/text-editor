@@ -297,7 +297,9 @@ void cmd_line_parse(Cmd_line* cmd_line, Editor** buffers, int* curr_buffer, int*
 			if (!term)
 				add_new_buffer(cmd_line->window, cmd_line->settings, buffers, buffer_amt, curr_buffer, "Terminal", false);
 			
+			buffers[*curr_buffer]->syntax_on = false;
 			editor_jump_bottom(buffers[*curr_buffer]);
+
 			// Reading from stdout	
 			FILE *fp;
 			char output[1048];

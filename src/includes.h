@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <sys/types.h>
+#include <ctype.h>
 #include <pwd.h>
 
 #include <SDL2/SDL.h>

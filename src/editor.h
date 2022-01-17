@@ -13,6 +13,7 @@ typedef struct
 	int buffer_len;
 
 	Window* window;
+	Settings* settings;
 	TTF_Font* font_1;
 	TTF_Font* font_2;
 
@@ -28,6 +29,19 @@ typedef struct
 	// Editor flags
 	bool modifiable, edited;
 	bool norm_visual, line_visual;
+
+	// Syntax stuff
+	bool syntax_on;
+	int data_types_len;
+	char** data_types;
+
+	int keywords_len;
+	char** keywords;
+
+	int functions_len;
+	char** functions;
+
+	char** bools;
 
 	SDL_Texture* editor_texture;
 	SDL_Texture* line_texture;

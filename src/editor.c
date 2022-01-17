@@ -5,6 +5,7 @@ Editor* editor_new(Window* window, Settings* settings, char* file_name, bool mod
 {
 	Editor* editor = (Editor*) malloc(sizeof(Editor));
 	editor->window = window;
+	editor->settings = settings;
 	editor->font_1 = sdl_check_ptr(TTF_OpenFont(settings->family1, settings->font_size_1));
 	editor->font_2 = sdl_check_ptr(TTF_OpenFont(settings->family2, settings->font_size_2));
 
@@ -40,6 +41,16 @@ Editor* editor_new(Window* window, Settings* settings, char* file_name, bool mod
 	editor->norm_visual = false;
 	editor->line_visual = false;
 
+	// Syntax stuff
+	editor->syntax_on = editor->settings->syntax_on;
+	editor->data_types_len = 0;
+	editor->data_types = NULL;
+	editor->keywords_len = 0;
+	editor->keywords = NULL;
+	editor->functions_len = 0;
+	editor->functions = NULL;
+	editor->bools = NULL;
+
 	editor_gen_texture(editor, window->renderer, editor->font_1);
 	editor_read_file(editor, editor->file_name);
 
@@ -64,7 +75,7 @@ void editor_resize(Editor* editor)
 	SDL_DestroyTexture(editor->bar_texture);
 
 	editor->editor_texture = sdl_check_ptr(SDL_CreateTexture(editor->window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width , editor->window->height));
-	editor->line_texture = sdl_check_ptr(SDL_CreateTexture(editor->window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->cur_w * 4, editor->window->height));
+	editor->line_texture = sdl_check_ptr(SDL_CreateTexture(editor->window->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->cur_w * 6, editor->window->height));
 
 	SDL_Texture* ch = create_texture(editor->window->renderer, editor->font_2, "A");
 	int w, h;
@@ -89,15 +100,51 @@ int editor_read_file(Editor* editor, char* file_name)
 		editor->buffer_len = 0;
 		strcpy(editor->text_buffer, "\0");
 
-		char ch;
-		while((ch = fgetc(file)) != EOF)
+		// Reading file line by line
+		char* line = NULL;
+		size_t len = 0;
+		ssize_t read;
+
+		while ((read = getline(&line, &len, file)) != -1)
 		{
-			editor_insert(editor, ch);
+			editor_insert_str(editor, line);
 		}
 
 		fclose(file);
 		editor->cur_x = editor->cur_y = editor->cur_rend_x = editor->cur_rend_y = 0;
 		strcpy(editor->file_name, file_name);
+
+		// Checking the file format
+		if ((strstr(file_name, ".c") != NULL) || (strstr(file_name, ".cpp") != NULL) || (strstr(file_name, ".h") != NULL))
+		{
+			editor->data_types_len = c_data_types_len;
+			editor->data_types = c_data_types;
+			editor->keywords_len = c_keywords_len;
+			editor->keywords = c_keywords;
+			editor->functions_len = c_functions_len;
+			editor->functions = c_functions;
+			editor->bools = c_bools;
+		}
+		else if (strstr(file_name, ".py"))
+		{
+			editor->data_types_len = py_data_types_len;
+			editor->data_types = py_data_types;
+			editor->keywords_len = py_keywords_len;
+			editor->keywords = py_keywords;
+			editor->functions_len = py_functions_len;
+			editor->functions = py_functions;
+			editor->bools = py_bools;
+		}
+		else
+		{
+			editor->data_types_len = 0;
+			editor->data_types = NULL;
+			editor->keywords_len = 0;
+			editor->keywords = NULL;
+			editor->functions_len = 0;
+			editor->functions = NULL;
+			editor->bools = NULL;
+		}
 
 		editor->edited = false;
 		return 3;
@@ -119,6 +166,39 @@ int editor_write_file(Editor* editor, char* file_name)
 		fclose(file);
 
 		strcpy(editor->file_name, file_name);
+
+		// Checking the file format
+		if ((strstr(file_name, ".c") != NULL) || (strstr(file_name, ".cpp") != NULL) || (strstr(file_name, ".h") != NULL))
+		{
+			editor->data_types_len = c_data_types_len;
+			editor->data_types = c_data_types;
+			editor->keywords_len = c_keywords_len;
+			editor->keywords = c_keywords;
+			editor->functions_len = c_functions_len;
+			editor->functions = c_functions;
+			editor->bools = c_bools;
+		}
+		else if (strstr(file_name, ".py"))
+		{
+			editor->data_types_len = py_data_types_len;
+			editor->data_types = py_data_types;
+			editor->keywords_len = py_keywords_len;
+			editor->keywords = py_keywords;
+			editor->functions_len = py_functions_len;
+			editor->functions = py_functions;
+			editor->bools = py_bools;
+		}
+		else
+		{
+			editor->data_types_len = 0;
+			editor->data_types = NULL;
+			editor->keywords_len = 0;
+			editor->keywords = NULL;
+			editor->functions_len = 0;
+			editor->functions = NULL;
+			editor->bools = NULL;
+		}
+
 		editor->edited = false;
 		return 0;
 	}
@@ -348,8 +428,6 @@ void editor_insert(Editor* editor, char chr)
 		editor->cur_rend_x = 0;
 		editor->cur_y++;
 		editor->cur_rend_y++;
-
-
 	}
 	// When user presses tab
 	else if (chr == '\t')
@@ -552,7 +630,7 @@ void editor_delete_left(Editor* editor)
 	for (int i = pos; i >= 0; i--) 
 	{
 		char ch = editor->text_buffer[i];
-		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n\t";
+		char characters[] = " !@$%^&*<>`~|\'\"(){}[]=+-,./\\:;%\n\t";
 		if (strchr(characters, ch) != NULL)
 		{
 			int size = pos - i + 1;
@@ -579,7 +657,7 @@ void editor_delete_right(Editor* editor)
 	for (int i = pos; i < editor->buffer_len; i++)
 	{
 		char ch = editor->text_buffer[i];
-		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n\t";
+		char characters[] = " !@$%^&*<>`~|\'\"(){}[]=+-,./\\:;%\n\t";
 		if (strchr(characters, ch) != NULL)
 		{
 			int size = i - pos + 1;
@@ -779,7 +857,7 @@ void editor_jump_left(Editor* editor)
 	for (int i = pos; i >= 0; i--) 
 	{
 		char ch = editor->text_buffer[i];
-		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n\t";
+		char characters[] = " !@$%^&*<>`~|\'\"(){}[]=+-,./\\:;%\n\t";
 		if (strchr(characters, ch) != NULL)
 		{
 			editor_set_cur_pos(editor, i - 1);
@@ -794,7 +872,7 @@ void editor_jump_right(Editor* editor)
 	for (int i = pos; i < editor->buffer_len; i++)
 	{
 		char ch = editor->text_buffer[i];
-		char characters[] = " !@$%^&*<>`~|#\'\"(){}[]=+-_,./\\:;%\n\t";
+		char characters[] = " !@$%^&*<>`~|\'\"(){}[]=+-,./\\:;%\n\t";
 		if (strchr(characters, ch) != NULL)
 		{
 			editor_set_cur_pos(editor, i);
@@ -1221,9 +1299,213 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 
 				if (strlen(text) > 0)
 				{
-					SDL_Texture* texture = create_texture(editor->window->renderer, font, text); 
-					editor_draw_line(editor, -editor->scroll_x, y, texture, colors_rgb->editor_fg);
-					SDL_DestroyTexture(texture);	
+					int x = 0, w = 0, h = 0;
+					if (editor->syntax_on)
+					{
+						// Parsing the text according to the spaces and special characters
+						int p = 0;
+
+						// Flags
+						bool comment = false;
+						bool str_start = false;
+						bool str_end = false;
+						
+						while (p < buff_size)
+						{
+							int space = 0;
+							
+							char spc[1];
+							char token[buff_size];
+							token[0] = '\0';
+							for (int i = p; i < buff_size; i++)
+							{
+								char ch = text[i];
+								if (ch != ' ' && !strchr(special_char, ch))
+								{
+									char str[1];
+									sprintf(str, "%c", ch);
+									strcat(token, str);
+									strcpy(spc, "\0");
+									p++;
+								}
+								else if (ch == ' ')
+								{
+									space++;
+									p++;
+									strcpy(spc, "\0");
+									break;
+								}
+								else if (strchr(special_char, ch) != NULL)
+								{
+									sprintf(spc, "%c", ch);
+									p++;
+									break;
+								}
+							}
+
+							if (strlen(token) > 0)
+							{
+								SDL_Texture* texture = create_texture(editor->window->renderer, font, token);
+								SDL_QueryTexture(texture, NULL, NULL, &w, &h);
+								SDL_Rect pos = { x - editor->scroll_x, y * h, w, h };
+
+								bool matched = false;
+								if ((!str_start && !str_end) && !comment)
+								{
+									// Checking for data types
+									for (int i = 0; i < editor->data_types_len; i++)
+									{
+										if (!strcmp(token, editor->data_types[i]))
+										{
+											SDL_SetTextureColorMod(texture, colors_rgb->types.r, colors_rgb->types.g, colors_rgb->types.b);
+											matched = true;
+											break;
+										}	
+									}
+
+									// Checking for keywords
+									for (int i = 0; i < editor->keywords_len; i++)
+									{
+										if (!strcmp(token, editor->keywords[i]))
+										{
+											SDL_SetTextureColorMod(texture, colors_rgb->keywords.r, colors_rgb->keywords.g, colors_rgb->keywords.b);
+											matched = true;
+											break;
+										}
+									}
+
+									// Checking for functions
+									for (int i = 0; i < editor->functions_len; i++)
+									{
+										if (!strcmp(token, editor->functions[i]))
+										{
+											SDL_SetTextureColorMod(texture, colors_rgb->functions.r, colors_rgb->functions.g, colors_rgb->functions.b);
+											matched = true;
+											break;
+										}
+									}
+
+									// Checking for constants or numbers
+									if (is_upper(token) || is_no(token))
+									{
+										SDL_SetTextureColorMod(texture, colors_rgb->constants.r, colors_rgb->constants.g, colors_rgb->constants.b);
+										matched = true;
+									}
+									else 
+									{
+										if (editor->bools != NULL)
+										{
+											for (int i = 0; i < 2; i++)
+											{
+												if (!strcmp(token, editor->bools[i]))
+												{
+													SDL_SetTextureColorMod(texture, colors_rgb->constants.r, colors_rgb->constants.g, colors_rgb->constants.b);
+													matched = true;
+													break;
+												}
+											}
+										}
+									}
+								}
+
+								// For string
+								if ((str_start && !str_end) || (!str_start && str_end))
+								{
+									SDL_SetTextureColorMod(texture, colors_rgb->string.r, colors_rgb->string.g, colors_rgb->string.b);
+									matched = true;
+								}
+								// For comment
+								else if (comment)
+								{
+									SDL_SetTextureColorMod(texture, colors_rgb->comment.r, colors_rgb->comment.g, colors_rgb->comment.b);
+									matched = true;
+								}
+
+
+								if (!matched)
+									SDL_SetTextureColorMod(texture, colors_rgb->editor_fg.r, colors_rgb->editor_fg.g, colors_rgb->editor_fg.b);
+
+								SDL_RenderCopy(editor->window->renderer, texture, NULL, &pos);
+								SDL_DestroyTexture(texture);
+
+								x += w;
+							}
+							if (strlen(spc) > 0)
+							{
+								SDL_Texture* texture = create_texture(editor->window->renderer, font, spc);
+								SDL_QueryTexture(texture, NULL, NULL, &w, &h);
+								SDL_Rect pos = { x - editor->scroll_x, y * h, w, h };
+
+								// Checking for string
+								if (!strcmp(spc, "\"") || !strcmp(spc, "\'"))
+								{
+									if (str_start)
+									{
+										str_start = false;
+										str_end = true;
+									}
+									else
+									{
+										str_start = true;
+										str_end = false;
+									}
+									// Adding support for slash quotes for strings
+									if (p > 1)
+									{
+										if (text[p - 2] == '\\')
+										{
+											str_start = true;
+											str_end = false;
+										}
+									}
+								}
+								// Checking for comments
+								else if (!strcmp(spc, "#") || !strcmp(spc, "/"))
+								{
+									comment = true;
+								}
+
+								if (!strcmp(spc, "<") && comment)
+								{
+									str_start = true;
+									str_end = false;
+								}
+								else if (!strcmp(spc, ">") && comment)
+								{
+									str_start = false;
+									str_end = true;
+								}
+								
+								if ((!str_start && !str_end) && !comment)
+									SDL_SetTextureColorMod(texture, colors_rgb->symbols.r, colors_rgb->symbols.g, colors_rgb->symbols.b);
+
+								if ((str_start && !str_end) || (!str_start && str_end))
+								{
+									SDL_SetTextureColorMod(texture, colors_rgb->string.r, colors_rgb->string.g, colors_rgb->string.b);
+									if (str_end) str_end = false;
+								}
+								else if (comment)
+								{
+									SDL_SetTextureColorMod(texture, colors_rgb->comment.r, colors_rgb->comment.g, colors_rgb->comment.b);
+								}
+
+
+								SDL_RenderCopy(editor->window->renderer, texture, NULL, &pos);
+								SDL_DestroyTexture(texture);
+								x += editor->cur_w;
+							}
+							else if (space > 0)
+								x += editor->cur_w;
+						}
+					}
+					else
+					{
+						// Plane rendering
+						SDL_Texture* texture = create_texture(editor->window->renderer, font, text);
+						SDL_QueryTexture(texture, NULL, NULL, &w, &h);
+						editor_draw_line(editor, -editor->scroll_x, y, texture, colors_rgb->editor_fg);
+						SDL_DestroyTexture(texture);
+					}
 				}
 			}
 		}
@@ -1365,11 +1647,11 @@ void editor_render(Editor* editor, Colors* colors_rgb)
 	SDL_SetRenderTarget(editor->window->renderer, NULL);
 
 	// Rendering text buffer
-	SDL_Rect texture_rect = { editor->cur_w * 4, 0, editor->window->width, editor->window->height};
+	SDL_Rect texture_rect = { editor->cur_w * 6, 0, editor->window->width, editor->window->height};
 	SDL_RenderCopy(editor->window->renderer, editor->editor_texture, NULL, &texture_rect);
-
+	
 	// Rendering line buffer
-	SDL_Rect line_rect = { 0, 0, editor->cur_w * 4, editor->window->height};
+	SDL_Rect line_rect = { 0, 0, editor->cur_w * 6, editor->window->height};
 	SDL_RenderCopy(editor->window->renderer, editor->line_texture, NULL, &line_rect);
 	
 	// Rendering command line buffer
@@ -1390,7 +1672,7 @@ void editor_gen_texture(Editor* editor, SDL_Renderer* renderer, TTF_Font* font)
 
 	// Generating textures for the buffers
 	editor->editor_texture = sdl_check_ptr(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->window->width , editor->window->height));
-	editor->line_texture = sdl_check_ptr(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->cur_w * 4, editor->window->height));
+	editor->line_texture = sdl_check_ptr(SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, editor->cur_w * 6, editor->window->height));
 
 	ch = create_texture(editor->window->renderer, editor->font_2, "A");
 	int w, h;

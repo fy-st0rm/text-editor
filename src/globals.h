@@ -4,8 +4,128 @@
 #include "includes.h"
 #include "util.h"
 
-// Datatypes
-static const char c_data_types[] = "int float char short long double signed unsigned size_t uint8_t uint16_t uint32_t";
+// Keywords in C
+static int c_data_types_len = 12;
+static const char* c_data_types[] = {
+	"void", "int", "float", "char", "long",
+	"short", "double", "signed", "unsigned", "size_t", 
+	"const", "bool"
+};
+
+static int c_keywords_len = 16;
+static const char* c_keywords[] = {
+	"auto",
+	"break",
+	"case",
+	"continue",
+	"default",
+	"do",
+	"else",
+	"for",
+	"goto",
+	"if",
+	"register",
+	"return",
+	"static",
+	"switch",
+	"volatile",
+	"while"
+};
+
+static int c_functions_len = 25;
+static const char* c_functions[] = {
+	"sizeof",
+	"typedef",
+	"union",
+	"struct",
+	"enum",
+	"extern",
+	"main",
+	"printf",
+	"fprintf",
+	"sprintf",
+	"scanf",
+	"fscanf",
+	"sscanf",
+	"fopen",
+	"popen",
+	"fclose",
+	"pclose",
+	"strlen",
+	"strcmp",
+	"strcpy",
+	"strcat",
+	"strstr",
+	"strchr",
+	"memmove",
+	"memcpy"
+};
+
+static const char* c_bools[] = { "false", "true" };
+
+// Keywords in python
+static int py_data_types_len = 13;
+static char* py_data_types[] = {
+	"str", "int", "float", "complex",
+	"list", "tuple", "dict",
+	"set", "frozenset", "bool",
+	"bytes", "bytearray", "memoryview"
+};
+
+static int py_keywords_len = 31;
+static char* py_keywords[] = {
+	"and",
+	"as",
+	"assert",
+	"break",
+	"class",	
+	"continue",
+	"def",
+	"del",
+	"elif",	
+	"else",	
+	"except",
+	"finally",
+	"for",
+	"from",	
+	"global",	
+	"if",
+	"import",	
+	"in",
+	"is",
+	"lambda",	
+	"None",
+	"nonlocal",
+	"not",
+	"or",
+	"pass",	
+	"raise",	
+	"return",
+	"try",	
+	"while",	
+	"with",
+	"yield"
+};
+
+static int py_functions_len = 12;
+static char* py_functions[] = {
+	"self",
+	"print",
+	"input",
+	"len",
+	"open",
+	"write",
+	"writelines",
+	"read",
+	"readlines",
+	"append",
+	"update",
+	"range"
+};
+
+static char* py_bools[] = { "True", "False" };
+
+static char special_char[] = " #!@$%^&*<>`~|\'\"(){}[]=+-,./\\:;%\n\t";
 
 // Replies
 static const char replies[9][100] = {
@@ -44,6 +164,15 @@ typedef struct
 	// Cursor
 	SDL_Color cursor;
 	SDL_Color selection;
+
+	// Syntax
+	SDL_Color comment;
+	SDL_Color types;
+	SDL_Color string;
+	SDL_Color keywords;
+	SDL_Color functions;
+	SDL_Color symbols;
+	SDL_Color constants;
 } Colors;
 
 // Settings
@@ -56,6 +185,7 @@ typedef struct
 	int font_size_2;
 
 	bool auto_indent;
+	bool syntax_on;
 } Settings;
 
 #endif
