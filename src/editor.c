@@ -1439,7 +1439,7 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 							{
 								SDL_Texture* texture = create_texture(editor->window->renderer, font, spc);
 								SDL_QueryTexture(texture, NULL, NULL, &w, &h);
-								SDL_Rect pos = { x - editor->scroll_x, y * h, w, h };
+								SDL_Rect pos = { x - (editor->scroll_x * editor->cur_w), y * h, w, h };
 
 								// Checking for string
 								if (!strcmp(spc, "\"") || !strcmp(spc, "\'"))
