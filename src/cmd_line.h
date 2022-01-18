@@ -32,6 +32,7 @@ void		cmd_line_resize			(Cmd_line* cmd_line);
 
 // Command line event functions
 void 		cmd_line_insert			(Cmd_line* cmd_line, char ch);
+void		cmd_line_insert_str		(Cmd_line* cmd_line, char* text);
 void		cmd_line_backspace  	(Cmd_line* cmd_line);
 
 // Commands

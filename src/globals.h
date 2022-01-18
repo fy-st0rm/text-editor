@@ -6,14 +6,14 @@
 
 // Keywords in C
 static int c_data_types_len = 12;
-static const char* c_data_types[] = {
+static char* c_data_types[] = {
 	"void", "int", "float", "char", "long",
 	"short", "double", "signed", "unsigned", "size_t", 
 	"const", "bool"
 };
 
 static int c_keywords_len = 16;
-static const char* c_keywords[] = {
+static char* c_keywords[] = {
 	"auto",
 	"break",
 	"case",
@@ -33,7 +33,7 @@ static const char* c_keywords[] = {
 };
 
 static int c_functions_len = 25;
-static const char* c_functions[] = {
+static char* c_functions[] = {
 	"sizeof",
 	"typedef",
 	"union",
@@ -61,7 +61,7 @@ static const char* c_functions[] = {
 	"memcpy"
 };
 
-static const char* c_bools[] = { "false", "true" };
+static char* c_bools[] = { "false", "true" };
 
 // Keywords in python
 static int py_data_types_len = 13;
@@ -128,7 +128,7 @@ static char* py_bools[] = { "True", "False" };
 static char special_char[] = " #!@$%^&*<>`~|\'\"(){}[]=+-,./\\:;%\n\t";
 
 // Replies
-static const char replies[9][100] = {
+static char replies[9][100] = {
 	{"S0: File saved sucessfully."},
 	{"E1: No file name."},
 	{"E2: Failed to open file."},
@@ -186,6 +186,7 @@ typedef struct
 
 	bool auto_indent;
 	bool syntax_on;
+	int max_buff;
 } Settings;
 
 #endif

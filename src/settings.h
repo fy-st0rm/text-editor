@@ -5,39 +5,34 @@
 #include "editor.h"
 #include "window.h"
 
-
 // Adds the new buffer to the buffer list
 static void add_new_buffer(Window* window, Settings* settings, Editor** buffers, int* buffer_amt, int* curr_buffer, char* file_name, bool modifiable)
 {
-	++*buffer_amt;
-	++*curr_buffer;
-
-	Editor** new_buffers = calloc(*buffer_amt * *buffer_amt, sizeof(Editor));
-	memcpy(new_buffers, buffers, sizeof(Editor) * *buffer_amt * *buffer_amt);
-
-	Editor* new_buffer = editor_new(window, settings, file_name, modifiable);
-	new_buffers[*curr_buffer] = new_buffer;
-
-	memcpy(buffers, new_buffers, *buffer_amt * *buffer_amt * sizeof(Editor));
-
-	// When new buffer is the **buffers**
-	if (!strcmp(file_name, "**buffers**"))
+	if (*buffer_amt + 1 < settings->max_buff)
 	{
-		editor_insert_str(buffers[*curr_buffer], "# These are the currently opened buffers. \n");
-		for (int i = 0; i < *buffer_amt; i++)
-		{
-			char* file_name = buffers[i]->file_name;
-			char index[3];
-			sprintf(index, "%d: ", i);
-			editor_insert_str(buffers[*curr_buffer], index);
-			editor_insert_str(buffers[*curr_buffer], file_name);
-			editor_insert(buffers[*curr_buffer], '\n');
-		}
-		buffers[*curr_buffer]->edited = false;
-		buffers[*curr_buffer]->modifiable = false;
-	}
+		++*buffer_amt;
+		++*curr_buffer;
 
-	free(new_buffers);
+		Editor* new_buffer = editor_new(window, settings, file_name, modifiable);
+		buffers[*curr_buffer] = new_buffer;
+
+		// When new buffer is the **buffers**
+		if (!strcmp(file_name, "**buffers**"))
+		{
+			editor_insert_str(buffers[*curr_buffer], "# These are the currently opened buffers. \n");
+			for (int i = 0; i < *buffer_amt; i++)
+			{
+				char* file_name = buffers[i]->file_name;
+				char index[3];
+				sprintf(index, "%d: ", i);
+				editor_insert_str(buffers[*curr_buffer], index);
+				editor_insert_str(buffers[*curr_buffer], file_name);
+				editor_insert(buffers[*curr_buffer], '\n');
+			}
+			buffers[*curr_buffer]->edited = false;
+			buffers[*curr_buffer]->modifiable = false;
+		}
+	}
 }
 
 static Settings* init_settings(Colors* colors_rgb, Window* window, Editor** buffers, int* buffer_amt, int* curr_buffer)
@@ -113,6 +108,19 @@ static Settings* init_settings(Colors* colors_rgb, Window* window, Editor** buff
 			else
 			{
 				fprintf(stderr, "Incorrect value for syntax on: %s\n", value);
+				exit(1);
+			}
+		}
+		else if (!strcmp(token, "MAX_BUFF"))
+		{
+			char* value = strtok(NULL, "\n");
+			if (is_no(value))
+			{
+				settings->max_buff = atoi(value);
+			}
+			else
+			{
+				fprintf(stderr, "Incorrect value for max buffers: %s\n", value);
 				exit(1);
 			}
 		}
@@ -239,11 +247,6 @@ static Settings* init_settings(Colors* colors_rgb, Window* window, Editor** buff
         free(line);
 
 	return settings;
-}
-
-static void free_settings(Settings* settings)
-{
-	free(settings);
 }
 
 #endif

@@ -66,6 +66,11 @@ void editor_destroy(Editor* editor)
 	SDL_DestroyTexture(editor->bar_texture);
 
 	free(editor);
+	editor->text_buffer = NULL;
+	editor->editor_texture = NULL;
+	editor->line_texture = NULL;
+	editor->bar_texture = NULL;
+	editor = NULL;
 }
 
 void editor_resize(Editor* editor)
@@ -1561,7 +1566,7 @@ void editor_render_bar(Editor* editor, TTF_Font* font, Colors* colors_rgb)
 	SDL_SetRenderTarget(editor->window->renderer, editor->bar_texture);
 	SDL_SetRenderDrawColor(editor->window->renderer, colors_rgb->bar_bg.r, colors_rgb->bar_bg.g, colors_rgb->bar_bg.b, colors_rgb->bar_bg.a);
 	SDL_RenderClear(editor->window->renderer);
-	
+
     int w, h; 
 	
 	// Rendering mode
@@ -1654,7 +1659,7 @@ void editor_render(Editor* editor, Colors* colors_rgb)
 	SDL_Rect line_rect = { 0, 0, editor->cur_w * 6, editor->window->height};
 	SDL_RenderCopy(editor->window->renderer, editor->line_texture, NULL, &line_rect);
 	
-	// Rendering command line buffer
+	// Rendering bar line buffer
 	SDL_Texture* ch = create_texture(editor->window->renderer, editor->font_2, "A");
 	int w, h;
 	SDL_QueryTexture(ch, NULL, NULL, &w, &h);

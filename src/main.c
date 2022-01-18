@@ -10,6 +10,7 @@
  * TODO: [ ] Find and replace
  * TODO: [ ] Mouse support
  * TODO: [ ] Fix the memory leak while resizing the window
+ * TODO: [X] Fix random crashes ( when creating new buffers, closing buffers )
  * TODO: [X] Config interpretor
  * TODO: [X] Syntax highlighting
  * TODO: [X] Simple terminal
@@ -149,11 +150,7 @@ void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer
 				else
 				{
 					cmd_line_clear_input(cmd_line);
-					char* reply = replies[5];
-					for (int i = 0; i < strlen(reply); i++)
-					{
-						cmd_line_insert(cmd_line, reply[i]);
-					}
+					cmd_line_insert_str(cmd_line, replies[5]);
 				}
 				keys->d = false;
 			}
@@ -171,11 +168,7 @@ void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer
 				else
 				{
 					cmd_line_clear_input(cmd_line);
-					char* reply = replies[5];
-					for (int i = 0; i < strlen(reply); i++)
-					{
-						cmd_line_insert(cmd_line, reply[i]);
-					}
+					cmd_line_insert_str(cmd_line, replies[5]);
 				}
 				keys->d = false;
 			}
@@ -198,11 +191,7 @@ void hjkl_movement(Editor* editor, SDL_Event event, Keys* keys, int* curr_buffer
 				else
 				{
 					cmd_line_clear_input(cmd_line);
-					char* reply = replies[5];
-					for (int i = 0; i < strlen(reply); i++)
-					{
-						cmd_line_insert(cmd_line, reply[i]);
-					}
+					cmd_line_insert_str(cmd_line, replies[5]);
 				}
 				keys->d = false;
 			}
@@ -240,12 +229,20 @@ int main(int argc, char** argv)
 
 	// List of buffers
 	int curr_buffer = -1;
+	int prev_buffer = curr_buffer;
 	int buffer_amt = 0;
-	Editor** buffers = calloc(buffer_amt * buffer_amt, sizeof(Editor));
+	Editor* temp_buffers[10];
 	
 	// Generating settings
 	Colors* colors_rgb = malloc(sizeof(Colors)); 
-	Settings* settings = init_settings(colors_rgb, window,  buffers, &buffer_amt, &curr_buffer);
+	Settings* settings = init_settings(colors_rgb, window,  temp_buffers, &buffer_amt, &curr_buffer);
+
+	// Copying from the temp buffer
+	Editor* buffers[settings->max_buff];
+	for (int i = 0; i < buffer_amt; i++)
+	{
+		buffers[i] = temp_buffers[i];
+	}
 
 	// Loading font
 	TTF_Font* font_1 = sdl_check_ptr(TTF_OpenFont(settings->family1, settings->font_size_1));
@@ -272,10 +269,7 @@ int main(int argc, char** argv)
 	bool loop = true;
 	bool halt = false;
 	SDL_Event event;
-
-	if (buffer_amt > 0)
-		halt = true;
-
+	
 	while (loop)
 	{
 		if (SDL_WaitEvent(&event))
@@ -351,11 +345,7 @@ int main(int argc, char** argv)
 							else
 							{
 								cmd_line_clear_input(cmd_line);
-								char* reply = replies[5];
-								for (int i = 0; i < strlen(reply); i++)
-								{
-									cmd_line_insert(cmd_line, reply[i]);
-								}
+								cmd_line_insert_str(cmd_line, replies[5]);
 							}
 							break;
 
@@ -370,11 +360,7 @@ int main(int argc, char** argv)
 							else
 							{
 								cmd_line_clear_input(cmd_line);
-								char* reply = replies[5];
-								for (int i = 0; i < strlen(reply); i++)
-								{
-									cmd_line_insert(cmd_line, reply[i]);
-								}
+								cmd_line_insert_str(cmd_line, replies[5]);
 							}
 							break;
 
@@ -394,11 +380,7 @@ int main(int argc, char** argv)
 							else
 							{
 								cmd_line_clear_input(cmd_line);
-								char* reply = replies[5];
-								for (int i = 0; i < strlen(reply); i++)
-								{
-									cmd_line_insert(cmd_line, reply[i]);
-								}
+								cmd_line_insert_str(cmd_line, replies[5]);
 							}
 							break;
 
@@ -416,11 +398,7 @@ int main(int argc, char** argv)
 							else
 							{
 								cmd_line_clear_input(cmd_line);
-								char* reply = replies[5];
-								for (int i = 0; i < strlen(reply); i++)
-								{
-									cmd_line_insert(cmd_line, reply[i]);
-								}
+								cmd_line_insert_str(cmd_line, replies[5]);
 							}
 							break;
 						
@@ -433,11 +411,7 @@ int main(int argc, char** argv)
 							else
 							{
 								cmd_line_clear_input(cmd_line);
-								char* reply = replies[5];
-								for (int i = 0; i < strlen(reply); i++)
-								{
-									cmd_line_insert(cmd_line, reply[i]);
-								}
+								cmd_line_insert_str(cmd_line, replies[5]);
 							}
 							break;
 
@@ -445,14 +419,19 @@ int main(int argc, char** argv)
 						case SDLK_n:
 							if (keys->ctrl)
 							{
-								add_new_buffer(window, settings, buffers, &buffer_amt, &curr_buffer, "", true);
-
-								// Writing the msg in cmdline
-								cmd_line_clear_input(cmd_line);
-								char* reply = replies[6];
-								for (int i = 0; i < strlen(reply); i++)
+								if (buffer_amt + 1 < settings->max_buff)
 								{
-									cmd_line_insert(cmd_line, reply[i]);
+									add_new_buffer(window, settings, buffers, &buffer_amt, &curr_buffer, "", true);
+
+									// Writing the msg in cmdline
+									cmd_line_clear_input(cmd_line);
+									cmd_line_insert_str(cmd_line, replies[6]);
+								}
+								else
+								{
+									// Writing the msg in cmdline
+									cmd_line_clear_input(cmd_line);
+									cmd_line_insert_str(cmd_line, "Buffers reached its max size.");
 								}
 							}
 							break;
@@ -469,11 +448,7 @@ int main(int argc, char** argv)
 							else
 							{
 								cmd_line_clear_input(cmd_line);
-								char* reply = replies[5];
-								for (int i = 0; i < strlen(reply); i++)
-								{
-									cmd_line_insert(cmd_line, reply[i]);
-								}
+								cmd_line_insert_str(cmd_line, replies[5]);
 							}
 							break;
 
@@ -522,11 +497,7 @@ int main(int argc, char** argv)
 							else
 							{
 								cmd_line_clear_input(cmd_line);
-								char* reply = replies[5];
-								for (int i = 0; i < strlen(reply); i++)
-								{
-									cmd_line_insert(cmd_line, reply[i]);
-								}
+								cmd_line_insert_str(cmd_line, replies[5]);
 							}
 							window->mode = NORMAL;
 							break;
@@ -540,11 +511,7 @@ int main(int argc, char** argv)
 							else
 							{
 								cmd_line_clear_input(cmd_line);
-								char* reply = replies[5];
-								for (int i = 0; i < strlen(reply); i++)
-								{
-									cmd_line_insert(cmd_line, reply[i]);
-								}
+								cmd_line_insert_str(cmd_line, replies[5]);
 							}
 							window->mode = NORMAL;
 
@@ -643,15 +610,7 @@ int main(int argc, char** argv)
 					case SDL_WINDOWEVENT_RESIZED:
 						SDL_GetWindowSize(window->window, &window->width, &window->height);
 						cmd_line_resize(cmd_line);
-
-						if (!halt)
-							editor_resize(buffers[curr_buffer]);
-						else
-						{
-							for (int i = 0 ; i < buffer_amt; i++)
-								editor_resize(buffers[i]);
-							halt = false;
-						}
+						editor_resize(buffers[curr_buffer]);
 						break;
 				}
 			}
@@ -662,6 +621,11 @@ int main(int argc, char** argv)
 			}
 			else
 			{
+				if (curr_buffer != prev_buffer)
+				{
+					editor_resize(buffers[curr_buffer]);
+					prev_buffer = curr_buffer;
+				}
 				window_clear(window, colors_rgb->editor_bg); 
 				editor_render(buffers[curr_buffer], colors_rgb);
 				cmd_line_render(cmd_line, font_2, colors_rgb);
@@ -671,9 +635,8 @@ int main(int argc, char** argv)
 
 	// Freeing up the memory
 	free(keys);
-	free(buffers);
 	free(colors_rgb);
-	free_settings(settings);
+	free(settings);
 
 	cmd_line_destroy(cmd_line);
 	window_destroy(window);

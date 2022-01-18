@@ -2,7 +2,9 @@ import os
 
 
 # Basic globals
-auto_indent = True
+AUTO_INDENT = True
+SYNTAX_ON = True
+MAX_BUFFERS= 10
 
 # Colors
 class Colors:
@@ -41,7 +43,6 @@ class Syntax:
 
 
 colors = Colors()
-syntax_on = True
 syntax = Syntax()
 
 
@@ -85,7 +86,9 @@ def generate_config():
 	src += f"FONT_SIZE_1 {font_1.size}\n"
 	src += f"FONT_SIZE_2 {font_2.size}\n"
 	
-	src += f"AUTO_INDENT {auto_indent}\n"
+	src += f"AUTO_INDENT {AUTO_INDENT}\n"
+	src += f"SYNTAX_ON {SYNTAX_ON}\n"
+	src += f"MAX_BUFF {MAX_BUFFERS}\n"
 
 	# Appending color values
 	src += f"EDITOR_BG {colors.editor_bg}\n"
@@ -103,7 +106,6 @@ def generate_config():
 	src += f"SELECTION {colors.selection}\n"
 
 	# Appending syntax color values
-	src += f"SYNTAX_ON {syntax_on}\n"
 	src += f"COMMENT {syntax.comment}\n"
 	src += f"TYPES {syntax.types}\n"
 	src += f"STRING {syntax.string}\n"
