@@ -79,6 +79,7 @@ static Settings* init_settings(Colors* colors_rgb, Window* window, Editor** buff
 		{
 			char* value = strtok(NULL, "\n");
 			settings->font_size_1 = atoi(value);
+			settings->def_font_size = atoi(value);
 		}
 		else if (!strcmp(token, "FONT_SIZE_2"))
 		{

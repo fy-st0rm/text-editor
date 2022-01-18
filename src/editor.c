@@ -1031,9 +1031,9 @@ void editor_scroll_right(Editor* editor)
 {
 	int w;
 	SDL_QueryTexture(editor->editor_texture, NULL, NULL, &w, NULL);
-	if (editor->cur_rend_x - editor->scroll_x >= (w - editor->cur_w * 4) / editor->cur_w)
+	if (editor->cur_rend_x - editor->scroll_x >= (w - editor->cur_w * 6) / editor->cur_w)
 	{
-		int diff = ((w - editor->cur_w * 4)/ editor->cur_w) - (editor->cur_rend_x - editor->scroll_x) - 1;
+		int diff = ((w - editor->cur_w * 6)/ editor->cur_w) - (editor->cur_rend_x - editor->scroll_x) - 1;
 		editor->scroll_x -= diff;
 	}
 }
@@ -1352,7 +1352,7 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 							{
 								SDL_Texture* texture = create_texture(editor->window->renderer, font, token);
 								SDL_QueryTexture(texture, NULL, NULL, &w, &h);
-								SDL_Rect pos = { x - editor->scroll_x, y * h, w, h };
+								SDL_Rect pos = { x - (editor->scroll_x * editor->cur_w) , y * h, w, h };
 
 								bool matched = false;
 								if ((!str_start && !str_end) && !comment)
@@ -1598,8 +1598,10 @@ void editor_render_bar(Editor* editor, TTF_Font* font, Colors* colors_rgb)
 	if (strlen(editor->file_name) > 0)
 	{
 		SDL_Texture* file_name = create_texture(editor->window->renderer, font, editor->file_name);
+		SDL_Rect pos_1 = { w, 0, w, h };
 		SDL_QueryTexture(file_name, NULL, NULL, &w, &h);
-		SDL_Rect pos_1 = { 4 * editor->cur_w, 0, w, h };
+		pos_1.w = w;
+		pos_1.h = h;
 		SDL_RenderCopy(editor->window->renderer, file_name, NULL, &pos_1);
 		SDL_DestroyTexture(file_name);
 	}

@@ -183,6 +183,7 @@ typedef struct
 	char family2[256];
 	int font_size_1;
 	int font_size_2;
+	int def_font_size;
 
 	bool auto_indent;
 	bool syntax_on;

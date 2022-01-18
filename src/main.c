@@ -585,6 +585,12 @@ int main(int argc, char** argv)
 							editor_change_font(buffers[curr_buffer], 0, settings->family1, settings->font_size_1);
 						}
 						break;
+					case SDLK_0:
+						if (keys->ctrl)
+						{
+							settings->font_size_1 = settings->def_font_size;
+							editor_change_font(buffers[curr_buffer], 0, settings->family1, settings->font_size_1);
+						}
 				}
 			}
 			else if (event.type == SDL_KEYUP)
