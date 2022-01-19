@@ -1505,7 +1505,7 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 									}
 								}
 								// Checking for comments
-								else if (!strcmp(spc, "#")) //|| ((!strcmp(spc, "/") && text[p] == '/')))
+								else if ((!strcmp(spc, "#")) || ((!strcmp(spc, "/") && text[p] == '/')))
 								{
 									comment = true;
 								}
