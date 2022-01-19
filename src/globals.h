@@ -5,16 +5,31 @@
 #include "util.h"
 
 // Keywords in C
-static int c_data_types_len = 12;
 static char* c_data_types[] = {
 	"void", "int", "float", "char", "long",
 	"short", "double", "signed", "unsigned", "size_t", 
 	"const", "bool"
 };
+static int c_data_types_len = sizeof(c_data_types) / sizeof(c_data_types[0]);
 
-static int c_keywords_len = 16;
 static char* c_keywords[] = {
+	"register",
+	"static",
+	"volatile",
+	"sizeof",
+	"typedef",
+	"union",
+	"struct",
+	"enum",
+	"extern"
+};
+static int c_keywords_len = sizeof(c_keywords) / sizeof(c_keywords[0]);
+
+static char* c_op_statements[] = {
+	"switch",
+	"while",
 	"auto",
+	"return",
 	"break",
 	"case",
 	"continue",
@@ -24,22 +39,10 @@ static char* c_keywords[] = {
 	"for",
 	"goto",
 	"if",
-	"register",
-	"return",
-	"static",
-	"switch",
-	"volatile",
-	"while"
 };
+static int c_op_statements_len = sizeof(c_op_statements) / sizeof(c_op_statements[0]);
 
-static int c_functions_len = 25;
 static char* c_functions[] = {
-	"sizeof",
-	"typedef",
-	"union",
-	"struct",
-	"enum",
-	"extern",
 	"main",
 	"printf",
 	"fprintf",
@@ -60,56 +63,62 @@ static char* c_functions[] = {
 	"memmove",
 	"memcpy"
 };
+static int c_functions_len = sizeof(c_functions) / sizeof(c_functions[0]);
 
 static char* c_bools[] = { "false", "true" };
 
 // Keywords in python
-static int py_data_types_len = 13;
 static char* py_data_types[] = {
 	"str", "int", "float", "complex",
 	"list", "tuple", "dict",
 	"set", "frozenset", "bool",
 	"bytes", "bytearray", "memoryview"
 };
+static int py_data_types_len = sizeof(py_data_types) / sizeof(py_data_types[0]);
 
-static int py_keywords_len = 31;
 static char* py_keywords[] = {
+	"assert",
+	"global",	
+	"import",	
+	"None",
+	"nonlocal",
+	"raise",	
+	"self",
 	"and",
 	"as",
-	"assert",
-	"break",
+	"from",	
+	"not",
+	"or",
+	"in",
+	"is"
+};
+static int py_keywords_len = sizeof(py_keywords) / sizeof(py_keywords[0]);
+
+static char* py_op_statements[] = {
 	"class",	
-	"continue",
 	"def",
 	"del",
-	"elif",	
-	"else",	
 	"except",
 	"finally",
 	"for",
-	"from",	
-	"global",	
-	"if",
-	"import",	
-	"in",
-	"is",
-	"lambda",	
-	"None",
-	"nonlocal",
-	"not",
-	"or",
-	"pass",	
-	"raise",	
+	"continue",
+	"elif",	
+	"else",	
+	"break",
 	"return",
 	"try",	
 	"while",	
 	"with",
-	"yield"
+	"yield",
+	"pass",	
+	"lambda",	
+	"if"
 };
+static int py_op_statements_len = sizeof(py_op_statements) / sizeof(py_op_statements[0]);
 
-static int py_functions_len = 12;
 static char* py_functions[] = {
-	"self",
+	"__init__",
+	"__name__",
 	"print",
 	"input",
 	"len",
@@ -122,6 +131,7 @@ static char* py_functions[] = {
 	"update",
 	"range"
 };
+static int py_functions_len = sizeof(py_functions) / sizeof(py_functions[0]);
 
 static char* py_bools[] = { "True", "False" };
 
@@ -170,6 +180,7 @@ typedef struct
 	SDL_Color types;
 	SDL_Color string;
 	SDL_Color keywords;
+	SDL_Color op_statements;
 	SDL_Color functions;
 	SDL_Color symbols;
 	SDL_Color constants;

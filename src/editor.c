@@ -47,6 +47,8 @@ Editor* editor_new(Window* window, Settings* settings, char* file_name, bool mod
 	editor->data_types = NULL;
 	editor->keywords_len = 0;
 	editor->keywords = NULL;
+	editor->op_statements_len = 0;
+	editor->op_statements = NULL;
 	editor->functions_len = 0;
 	editor->functions = NULL;
 	editor->bools = NULL;
@@ -126,6 +128,8 @@ int editor_read_file(Editor* editor, char* file_name)
 			editor->data_types = c_data_types;
 			editor->keywords_len = c_keywords_len;
 			editor->keywords = c_keywords;
+			editor->op_statements_len = c_op_statements_len;
+			editor->op_statements = c_op_statements;
 			editor->functions_len = c_functions_len;
 			editor->functions = c_functions;
 			editor->bools = c_bools;
@@ -136,6 +140,8 @@ int editor_read_file(Editor* editor, char* file_name)
 			editor->data_types = py_data_types;
 			editor->keywords_len = py_keywords_len;
 			editor->keywords = py_keywords;
+			editor->op_statements_len = py_op_statements_len;
+			editor->op_statements = py_op_statements;
 			editor->functions_len = py_functions_len;
 			editor->functions = py_functions;
 			editor->bools = py_bools;
@@ -146,6 +152,8 @@ int editor_read_file(Editor* editor, char* file_name)
 			editor->data_types = NULL;
 			editor->keywords_len = 0;
 			editor->keywords = NULL;
+			editor->op_statements_len = 0;
+			editor->op_statements = NULL;
 			editor->functions_len = 0;
 			editor->functions = NULL;
 			editor->bools = NULL;
@@ -179,6 +187,8 @@ int editor_write_file(Editor* editor, char* file_name)
 			editor->data_types = c_data_types;
 			editor->keywords_len = c_keywords_len;
 			editor->keywords = c_keywords;
+			editor->op_statements_len = c_op_statements_len;
+			editor->op_statements = c_op_statements;
 			editor->functions_len = c_functions_len;
 			editor->functions = c_functions;
 			editor->bools = c_bools;
@@ -189,6 +199,8 @@ int editor_write_file(Editor* editor, char* file_name)
 			editor->data_types = py_data_types;
 			editor->keywords_len = py_keywords_len;
 			editor->keywords = py_keywords;
+			editor->op_statements_len = py_op_statements_len;
+			editor->op_statements = py_op_statements;
 			editor->functions_len = py_functions_len;
 			editor->functions = py_functions;
 			editor->bools = py_bools;
@@ -199,6 +211,8 @@ int editor_write_file(Editor* editor, char* file_name)
 			editor->data_types = NULL;
 			editor->keywords_len = 0;
 			editor->keywords = NULL;
+			editor->op_statements_len = 0;
+			editor->op_statements = NULL;
 			editor->functions_len = 0;
 			editor->functions = NULL;
 			editor->bools = NULL;
@@ -1358,55 +1372,81 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 								if ((!str_start && !str_end) && !comment)
 								{
 									// Checking for data types
-									for (int i = 0; i < editor->data_types_len; i++)
+									if (!matched)
 									{
-										if (!strcmp(token, editor->data_types[i]))
+										for (int i = 0; i < editor->data_types_len; i++)
 										{
-											SDL_SetTextureColorMod(texture, colors_rgb->types.r, colors_rgb->types.g, colors_rgb->types.b);
-											matched = true;
-											break;
-										}	
+											if (!strcmp(token, editor->data_types[i]))
+											{
+												SDL_SetTextureColorMod(texture, colors_rgb->types.r, colors_rgb->types.g, colors_rgb->types.b);
+												matched = true;
+												break;
+											}	
+										}
 									}
 
 									// Checking for keywords
-									for (int i = 0; i < editor->keywords_len; i++)
+									if (!matched)
 									{
-										if (!strcmp(token, editor->keywords[i]))
+										for (int i = 0; i < editor->keywords_len; i++)
 										{
-											SDL_SetTextureColorMod(texture, colors_rgb->keywords.r, colors_rgb->keywords.g, colors_rgb->keywords.b);
-											matched = true;
-											break;
+											if (!strcmp(token, editor->keywords[i]))
+											{
+												SDL_SetTextureColorMod(texture, colors_rgb->keywords.r, colors_rgb->keywords.g, colors_rgb->keywords.b);
+												matched = true;
+												break;
+											}
+										}
+									}
+
+									// Checking for operating statements
+									if (!matched)
+									{
+										for (int i = 0; i < editor->op_statements_len; i++)
+										{
+											if (!strcmp(token, editor->op_statements[i]))
+											{
+												SDL_SetTextureColorMod(texture, colors_rgb->op_statements.r, colors_rgb->op_statements.g, colors_rgb->op_statements.b);
+												matched = true;
+												break;
+											}
 										}
 									}
 
 									// Checking for functions
-									for (int i = 0; i < editor->functions_len; i++)
+									if (!matched)
 									{
-										if (!strcmp(token, editor->functions[i]))
+										for (int i = 0; i < editor->functions_len; i++)
 										{
-											SDL_SetTextureColorMod(texture, colors_rgb->functions.r, colors_rgb->functions.g, colors_rgb->functions.b);
-											matched = true;
-											break;
+											if (!strcmp(token, editor->functions[i]))
+											{
+												SDL_SetTextureColorMod(texture, colors_rgb->functions.r, colors_rgb->functions.g, colors_rgb->functions.b);
+												matched = true;
+												break;
+											}
 										}
 									}
 
 									// Checking for constants or numbers
-									if (is_upper(token) || is_no(token))
+									if (!matched)
 									{
-										SDL_SetTextureColorMod(texture, colors_rgb->constants.r, colors_rgb->constants.g, colors_rgb->constants.b);
-										matched = true;
-									}
-									else 
-									{
-										if (editor->bools != NULL)
+										if (is_upper(token) || is_no(token))
 										{
-											for (int i = 0; i < 2; i++)
+											SDL_SetTextureColorMod(texture, colors_rgb->constants.r, colors_rgb->constants.g, colors_rgb->constants.b);
+											matched = true;
+										}
+										else 
+										{
+											if (editor->bools != NULL)
 											{
-												if (!strcmp(token, editor->bools[i]))
+												for (int i = 0; i < 2; i++)
 												{
-													SDL_SetTextureColorMod(texture, colors_rgb->constants.r, colors_rgb->constants.g, colors_rgb->constants.b);
-													matched = true;
-													break;
+													if (!strcmp(token, editor->bools[i]))
+													{
+														SDL_SetTextureColorMod(texture, colors_rgb->constants.r, colors_rgb->constants.g, colors_rgb->constants.b);
+														matched = true;
+														break;
+													}
 												}
 											}
 										}
@@ -1414,13 +1454,13 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 								}
 
 								// For string
-								if ((str_start && !str_end) || (!str_start && str_end))
+								if (!matched && ((str_start && !str_end) || (!str_start && str_end)))
 								{
 									SDL_SetTextureColorMod(texture, colors_rgb->string.r, colors_rgb->string.g, colors_rgb->string.b);
 									matched = true;
 								}
 								// For comment
-								else if (comment)
+								else if (comment && !matched)
 								{
 									SDL_SetTextureColorMod(texture, colors_rgb->comment.r, colors_rgb->comment.g, colors_rgb->comment.b);
 									matched = true;
@@ -1465,7 +1505,7 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 									}
 								}
 								// Checking for comments
-								else if (!strcmp(spc, "#") || !strcmp(spc, "/"))
+								else if (!strcmp(spc, "#")) //|| ((!strcmp(spc, "/") && text[p] == '/')))
 								{
 									comment = true;
 								}

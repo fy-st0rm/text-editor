@@ -269,9 +269,16 @@ int main(int argc, char** argv)
 	bool loop = true;
 	bool halt = false;
 	SDL_Event event;
+
+	// Frame stuff
+	int fps = 75;
+	int frame_delay = 1000 / fps;
+	Uint32 frame_start;
+	int frame_time;
 	
 	while (loop)
 	{
+		frame_start = SDL_GetTicks();
 		if (SDL_WaitEvent(&event))
 		{
 			if (event.type == SDL_QUIT)
@@ -636,6 +643,13 @@ int main(int argc, char** argv)
 				editor_render(buffers[curr_buffer], colors_rgb);
 				cmd_line_render(cmd_line, font_2, colors_rgb);
 			}
+		}
+
+		// capping the frame rate to 60
+		frame_time = SDL_GetTicks() - frame_start;
+		if (frame_delay > frame_time)
+		{
+			SDL_Delay(frame_delay - frame_time);		
 		}
 	}
 

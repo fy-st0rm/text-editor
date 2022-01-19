@@ -38,6 +38,9 @@ typedef struct
 	int keywords_len;
 	char** keywords;
 
+	int op_statements_len;
+	char** op_statements;
+
 	int functions_len;
 	char** functions;
 

@@ -213,6 +213,11 @@ static Settings* init_settings(Colors* colors_rgb, Window* window, Editor** buff
 			char* value = strtok(NULL, "\n");
 			colors_rgb->keywords = hex_to_rgb(value);
 		}
+		else if (!strcmp(token, "OP_STATEMENTS"))
+		{
+			char* value = strtok(NULL, "\n");
+			colors_rgb->op_statements = hex_to_rgb(value);
+		}
 		else if (!strcmp(token, "FUNCTIONS"))
 		{
 			char* value = strtok(NULL, "\n");
