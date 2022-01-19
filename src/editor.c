@@ -251,23 +251,26 @@ void editor_update_cursor(Editor* editor)
 // Editor buffer management
 int	editor_get_cur_pos(Editor* editor, int x, int y)
 {
-	// Calculates the position of the cursor in the 1D text buffer
-	int pos = 0;
-	int index = 0;
-	int line = 0;
-	for (int i = 0; i < editor->buffer_len; i++)
+	int pos = 0, end = 0;
+
+	char* line = strchr(editor->text_buffer, '\n');
+	if (line != NULL)
+		end = line - editor->text_buffer;
+	else
+		end = editor->buffer_len;
+	line++;
+	pos = end;
+
+	for (int i = 0; i < y; i++)
 	{
-		if (line == y) break;
-		if (editor->text_buffer[i] == '\n') 
-		{
-			pos += index + 1;
-			index = 0;
-			line++;
-		}
+		line = strchr(line, '\n');
+		if (line != NULL)
+			end = line - editor->text_buffer;
 		else
-			index++;
+			end = editor->buffer_len;
+		line++;
+		pos = end;
 	}
-	pos += x;
 	return pos;
 }
 
@@ -350,71 +353,61 @@ int editor_get_line_no(Editor* editor)
 
 int editor_line_len(Editor* editor, int line_no)
 {
-	int size = 0, start = 0, end = 0, lines = 0;
-	for (int i = 0; i < editor->buffer_len; i++)
+	int start = 0, end = 0;
+
+	char* line = strchr(editor->text_buffer, '\n');
+	if (line != NULL)
+		end = line - editor->text_buffer;
+	else
+		end = editor->buffer_len;
+	line++;
+
+	for (int i = 1; i < line_no; i++)
 	{
-		if ((editor->text_buffer[i] == '\n') || (i + 1 == editor->buffer_len))
-		{	
-			lines++;
-			if (lines == line_no)
-			{
-				if (editor->buffer_len == end + 1) end++;
-				size = end - start;
-				break;
-			}
-			else
-			{
-				end++;
-				start = end;
-			}
-		}
+		line = strchr(line, '\n');
+		start = ++end;
+		if (line != NULL)
+			end = line - editor->text_buffer;
 		else
-		{
-			end++;
-		}
+			end = editor->buffer_len;
+		line++;
 	}
+
+	int size = end - start;
 	return size;
 }
 
 void editor_get_line(Editor* editor, int line_no, char* out)
 {
-	// Gets the string of the particular line no
-	int start = 0, end = 0, lines = 0;
-	for (int i = 0; i < editor->buffer_len; i++)
+	int start = 0, end = 0;
+
+	char* line = strchr(editor->text_buffer, '\n');
+	if (line != NULL)
+		end = line - editor->text_buffer;
+	else
+		end = editor->buffer_len;
+	line++;
+
+	for (int i = 1; i < line_no; i++)
 	{
-		if ((editor->text_buffer[i] == '\n') || (i + 1 == editor->buffer_len))
-		{	
-			lines++;
-			if (lines == line_no)
-			{	
-				if (editor->buffer_len == end + 1) end++;
-				int size = end - start;
-				memcpy(out, editor->text_buffer+start, size);
-				strcpy(out + size, "\0");
-				break;
-			}
-			else
-			{
-				end++;
-				start = end;
-			}
-		}
+		line = strchr(line, '\n');
+		start = ++end;
+		if (line != NULL)
+			end = line - editor->text_buffer;
 		else
-		{
-			end++;
-		}
+			end = editor->buffer_len;
+		line++;
 	}
-	if (end == 0)
-	{
-		strcpy(out, "\0");
-	}
+
+	int size = end - start;
+	memcpy(out, editor->text_buffer + start, size);
+	strcpy(out + size, "\0");
 }
 
 // Insert functions
 void editor_insert(Editor* editor, char chr)
 {
 	char* new_buffer = calloc(editor->buffer_len + 2, sizeof(char));
-
 	int pos = editor_get_cur_pos(editor, editor->cur_x, editor->cur_y);
 
 	// Inserting character when the cursor is at last position
@@ -1292,7 +1285,6 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 				{
 					if (line[i] == '\t') buff_size += TAB_SIZE - 1;
 				}
-
 				char text[buff_size + 1];
 
 				for (int k = 0, j = 0; j < size; j++)
@@ -1465,14 +1457,11 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 									SDL_SetTextureColorMod(texture, colors_rgb->comment.r, colors_rgb->comment.g, colors_rgb->comment.b);
 									matched = true;
 								}
-
-
-								if (!matched)
+								else if (!matched)
 									SDL_SetTextureColorMod(texture, colors_rgb->editor_fg.r, colors_rgb->editor_fg.g, colors_rgb->editor_fg.b);
 
 								SDL_RenderCopy(editor->window->renderer, texture, NULL, &pos);
 								SDL_DestroyTexture(texture);
-
 								x += w;
 							}
 							if (strlen(spc) > 0)
@@ -1534,7 +1523,6 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 									SDL_SetTextureColorMod(texture, colors_rgb->comment.r, colors_rgb->comment.g, colors_rgb->comment.b);
 								}
 
-
 								SDL_RenderCopy(editor->window->renderer, texture, NULL, &pos);
 								SDL_DestroyTexture(texture);
 								x += editor->cur_w;
@@ -1555,7 +1543,6 @@ void editor_render_buffer(Editor* editor, int start, int end, TTF_Font* font, Co
 			}
 		}
 	}
-
 	// Rendering cursor
 	SDL_Rect cur_rect = { (editor->cur_rend_x - editor->scroll_x) * editor->cur_w,  (editor->cur_rend_y - editor->scroll_y) * editor->cur_h , editor->cur_w, editor->cur_h };
 	SDL_SetRenderDrawColor(editor->window->renderer, colors_rgb->cursor.r, colors_rgb->cursor.g, colors_rgb->cursor.b, colors_rgb->cursor.a);

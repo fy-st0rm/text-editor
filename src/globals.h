@@ -134,7 +134,6 @@ static char* py_functions[] = {
 static int py_functions_len = sizeof(py_functions) / sizeof(py_functions[0]);
 
 static char* py_bools[] = { "True", "False" };
-
 static char special_char[] = " #!@$%^&*<>`~|\'\"(){}[]=+-,./\\:;%\n\t";
 
 // Replies

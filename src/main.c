@@ -5,11 +5,11 @@
 #include "cmd_line.h"
 
 /*
- * TODO: [ ] Optimize the editor (it counts through all the text in buffer when calculating cur pos)
  * TODO: [ ] Undo and redo
  * TODO: [ ] Find and replace
  * TODO: [ ] Mouse support
  * TODO: [ ] Fix the memory leak while resizing the window
+ * TODO: [X] Optimize the editor (it counts through all the text in buffer when calculating cur pos)
  * TODO: [X] Fix random crashes ( when creating new buffers, closing buffers )
  * TODO: [X] Config interpretor
  * TODO: [X] Syntax highlighting
