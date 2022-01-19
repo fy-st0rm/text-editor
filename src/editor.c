@@ -259,18 +259,18 @@ int	editor_get_cur_pos(Editor* editor, int x, int y)
 	else
 		end = editor->buffer_len;
 	line++;
-	pos = end;
 
 	for (int i = 0; i < y; i++)
 	{
+		pos = end + 1;
 		line = strchr(line, '\n');
 		if (line != NULL)
 			end = line - editor->text_buffer;
 		else
 			end = editor->buffer_len;
 		line++;
-		pos = end;
 	}
+	pos += x;
 	return pos;
 }
 

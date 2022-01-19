@@ -5,6 +5,7 @@
 #include "cmd_line.h"
 
 /*
+ * TODO: [ ] Text below the cursor is not showing
  * TODO: [ ] Undo and redo
  * TODO: [ ] Find and replace
  * TODO: [ ] Mouse support
